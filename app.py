@@ -24,7 +24,7 @@ st.set_page_config(
     page_title="TOEIC Master — Gia sư TOEIC AI",
     page_icon="🎓",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 from src.ask import get_bot_response, stream_bot_response
@@ -43,89 +43,295 @@ logger = logging.getLogger("streamlit_app")
 
 
 # ==========================================
-# CUSTOM CSS FOR PREMIUM DESIGN (Glassmorphism & SLEEK DARK ACCENTS)
+# CUSTOM CSS FOR LANDING PAGE AI DESIGN (Glassmorphism & Sleek Dark Video Overlay)
 # ==========================================
-st.markdown("""
+custom_css = """
 <style>
-    /* Tổng thể & Background */
+    /* Import font Outfit */
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+    /* Main App Reset */
     .stApp {
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-        color: #f8fafc;
-        font-family: 'Inter', sans-serif;
+        background: transparent !important;
+        font-family: 'Outfit', sans-serif !important;
     }
-    
-    /* Tùy chỉnh Sidebar */
-    [data-testid="stSidebar"] {
-        background-color: rgba(15, 23, 42, 0.95) !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+
+    /* Video Background */
+    #bg-video {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        z-index: -100;
+        object-fit: cover;
+        pointer-events: none;
     }
-    
-    /* Thiết kế Glassmorphic card cho tiêu đề */
-    .header-container {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 25px;
+
+    #bg-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at center, rgba(15, 23, 42, 0.4) 0%, rgba(8, 10, 20, 0.85) 100%);
+        backdrop-filter: blur(8px);
+        z-index: -99;
+    }
+
+    /* Hide Sidebar & Default Controls */
+    [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] {
+        display: none !important;
+    }
+
+    header, [data-testid="stHeader"] {
+        background: transparent !important;
+    }
+
+    footer {
+        visibility: hidden !important;
+    }
+
+    /* Container Padding & Max-Width */
+    [data-testid="stAppViewBlockContainer"] {
+        max-width: 850px !important;
+        padding-top: 3rem !important;
+        padding-bottom: 7rem !important;
+        margin: 0 auto !important;
+    }
+
+    /* Badge Styling */
+    .badge-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1.2rem;
+    }
+    .hero-badge {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        border-radius: 50px;
+        padding: 6px 18px;
+        color: #c084fc;
+        font-size: 0.85rem;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.15);
+    }
+
+    /* Hero Section Text */
+    .hero-container {
         text-align: center;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        margin-top: 4vh;
+        margin-bottom: 2.5rem;
     }
-    
-    .header-title {
-        background: linear-gradient(to right, #38bdf8, #818cf8, #c084fc);
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin-bottom: 5px;
-        letter-spacing: -0.025em;
+        margin-bottom: 0.8rem;
     }
-    
-    .header-subtitle {
+    .hero-subtitle {
         color: #94a3b8;
-        font-size: 1.1rem;
+        font-size: 1.15rem;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* Glassmorphic Central Input Card (Empty State) */
+    .input-card {
+        background: rgba(15, 23, 42, 0.35) !important;
+        backdrop-filter: blur(25px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 24px !important;
+        padding: 22px !important;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3) !important;
+        margin-bottom: 1.5rem;
+    }
+    .input-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 12px;
+    }
+    .header-left {
+        color: #cbd5e1;
         font-weight: 400;
     }
-    
-    /* Customize Chat Input */
-    [data-testid="stChatInput"] {
-        background-color: rgba(30, 41, 59, 0.7) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    .header-left strong {
+        color: #818cf8;
+    }
+    .header-right {
+        font-weight: 500;
+        color: #818cf8;
+    }
+
+    /* Remove default Streamlit border for form */
+    div[data-testid="stForm"] {
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    /* Style text input inside card */
+    div[data-testid="stTextInput"] input {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
         border-radius: 12px !important;
         color: #f8fafc !important;
+        font-size: 1.1rem !important;
+        padding: 14px 18px !important;
+        transition: all 0.2s ease !important;
     }
-    
-    /* Custom status & info box */
-    .info-card {
-        background: rgba(129, 140, 248, 0.08);
-        border-left: 4px solid #818cf8;
-        padding: 12px 16px;
-        border-radius: 0 12px 12px 0;
-        margin-bottom: 15px;
+    div[data-testid="stTextInput"] input:focus {
+        border-color: rgba(129, 140, 248, 0.4) !important;
+        background-color: rgba(255, 255, 255, 0.04) !important;
+        box-shadow: 0 0 15px rgba(129, 140, 248, 0.1) !important;
     }
-    
-    /* Căn chỉnh lại padding của chat bubbles */
-    .stChatMessage {
+
+    /* Form Buttons styling */
+    .clear-btn-wrapper button {
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        color: #94a3b8 !important;
+        border-radius: 12px !important;
+        padding: 8px 16px !important;
+        transition: all 0.2s ease !important;
+    }
+    .clear-btn-wrapper button:hover {
+        background: rgba(239, 68, 68, 0.12) !important;
+        border-color: rgba(239, 68, 68, 0.3) !important;
+        color: #f87171 !important;
+    }
+
+    .send-btn-wrapper button {
+        background: #ffffff !important;
+        border: none !important;
+        color: #0f172a !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        padding: 8px 20px !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15) !important;
+        width: 100% !important;
+    }
+    .send-btn-wrapper button:hover {
+        background: #cbd5e1 !important;
+        transform: scale(1.02) !important;
+    }
+
+    /* Suggestion Title & Chips Group */
+    .suggestion-group-title {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-top: 1.5rem;
+        margin-bottom: 0.8rem;
+        text-align: center;
+    }
+    .chip-group div.stButton > button {
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.06) !important;
         border-radius: 16px !important;
-        padding: 15px !important;
-        margin-bottom: 12px !important;
-        border: 1px solid rgba(255, 255, 255, 0.02) !important;
+        color: #cbd5e1 !important;
+        font-size: 0.85rem !important;
+        padding: 8px 16px !important;
+        transition: all 0.2s ease !important;
+        white-space: normal !important;
+        height: auto !important;
+        min-height: 40px !important;
     }
-    
-    /* User chat bubble */
-    [data-testid="stChatMessageUser"] {
-        background-color: rgba(56, 189, 248, 0.08) !important;
-        border-left: 4px solid #38bdf8 !important;
+    .chip-group div.stButton > button:hover {
+        background: rgba(129, 140, 248, 0.15) !important;
+        border-color: rgba(129, 140, 248, 0.4) !important;
+        color: #a5b4fc !important;
+        transform: translateY(-2px) !important;
     }
-    
-    /* Bot chat bubble */
-    [data-testid="stChatMessageAssistant"] {
+
+    /* Custom Chat Bubble Container */
+    [data-testid="stChatMessage"] {
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0px !important;
+        margin-bottom: 1.8rem !important;
+    }
+
+    [data-testid="stChatMessageContent"] {
+        border-radius: 18px !important;
+        padding: 16px 20px !important;
+    }
+
+    /* User Bubble Inner Message */
+    [data-testid="stChatMessageUser"] [data-testid="stChatMessageContent"] {
+        background-color: rgba(56, 189, 248, 0.06) !important;
+        border: 1px solid rgba(56, 189, 248, 0.15) !important;
+        color: #f0f9ff !important;
+        box-shadow: 0 4px 15px rgba(56, 189, 248, 0.03) !important;
+    }
+
+    /* Assistant Bubble Inner Message */
+    [data-testid="stChatMessageAssistant"] [data-testid="stChatMessageContent"] {
         background-color: rgba(129, 140, 248, 0.05) !important;
-        border-left: 4px solid #818cf8 !important;
+        border: 1px solid rgba(129, 140, 248, 0.15) !important;
+        color: #f5f3ff !important;
+        box-shadow: 0 6px 20px rgba(129, 140, 248, 0.03) !important;
+    }
+
+    /* Customize bottom chat input (Active State) */
+    div[data-testid="stChatInputContainer"] {
+        background: rgba(15, 23, 42, 0.45) !important;
+        backdrop-filter: blur(25px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3) !important;
+        padding: 10px 15px !important;
+    }
+    div[data-testid="stChatInputContainer"] textarea {
+        background-color: transparent !important;
+        color: #f8fafc !important;
+        font-size: 1rem !important;
+    }
+
+    /* Float clear button styling (Active State) */
+    .clear-btn-container {
+        position: fixed;
+        bottom: 95px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 850px;
+        max-width: 90%;
+        z-index: 999;
+        display: flex;
+        justify-content: flex-start;
+        pointer-events: none;
+    }
+    .clear-btn-container button {
+        pointer-events: auto;
+        background: rgba(239, 68, 68, 0.15) !important;
+        border: 1px solid rgba(239, 68, 68, 0.3) !important;
+        color: #f87171 !important;
+        border-radius: 12px !important;
+        padding: 6px 14px !important;
+        font-size: 0.8rem !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 4px 10px rgba(239, 68, 68, 0.1) !important;
+    }
+    .clear-btn-container button:hover {
+        background: rgba(239, 68, 68, 0.25) !important;
+        border-color: rgba(239, 68, 68, 0.5) !important;
+        transform: translateY(-1px) !important;
     }
 </style>
-""", unsafe_allow_html=True)
+"""
 
 
 # ==========================================
@@ -137,8 +343,7 @@ def initialize_engine():
     try:
         db = get_vector_db()
         doc_count = len(db.docstore._dict)
-        # Khởi động sẵn BM25 nếu cấu hình hybrid được bật
-        bm25_retriever = _get_bm25_retriever()
+        _get_bm25_retriever()
         return True, doc_count, None
     except FileNotFoundError as e:
         return False, 0, f"Không tìm thấy thư mục dữ liệu RAG: {e}"
@@ -146,17 +351,27 @@ def initialize_engine():
         return False, 0, f"Lỗi khởi động hệ thống: {e}"
 
 
+def safe_rerun():
+    """Rerun Streamlit tương thích với nhiều phiên bản."""
+    try:
+        st.rerun()
+    except AttributeError:
+        st.experimental_rerun()
+
+
 # ==========================================
 # MAIN APP FLOW
 # ==========================================
 def main():
-    # 1. Hiển thị Header
+    # 1. Khởi chạy background video & custom CSS
     st.markdown("""
-    <div class="header-container">
-        <div class="header-title">🎓 TOEIC MASTER</div>
-        <div class="header-subtitle">Gia sư TOEIC AI thông minh — Luyện thi cá nhân hóa hoàn toàn offline</div>
-    </div>
+    <video autoplay loop muted playsinline id="bg-video">
+        <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260329_050842_be71947f-f16e-4a14-810c-06e83d23ddb5.mp4" type="video/mp4">
+    </video>
+    <div id="bg-overlay"></div>
     """, unsafe_allow_html=True)
+    
+    st.markdown(custom_css, unsafe_allow_html=True)
 
     # 2. Khởi tạo Engine RAG
     with st.spinner("🚀 Đang khởi chạy hệ thống (tải mô hình ngôn ngữ và vector index)..."):
@@ -174,83 +389,123 @@ def main():
     if "bot_memory" not in st.session_state:
         st.session_state.bot_memory = ConversationMemory()  # Bộ nhớ context cho LLM
 
-    # 4. SIDEBAR CONFIGURATION
-    st.sidebar.title("⚙️ Cấu hình hệ thống")
-    
-    st.sidebar.markdown(f"""
-    <div class="info-card">
-        <strong>📚 Kho tri thức RAG:</strong><br>
-        Đang chứa <b>{doc_count}</b> chunks tài liệu TOEIC/Ngữ pháp.
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Các tham số tinh chỉnh LLM & RAG
-    st.sidebar.subheader("🔍 Thiết lập Tìm kiếm & LLM")
-    
-    # Model name
-    model_name = st.sidebar.text_input(
-        "Tên mô hình Ollama", 
-        value=OLLAMA_MODEL_NAME, 
-        help="Đảm bảo Ollama đang chạy mô hình này (ví dụ: gemma2, qwen2.5:7b)"
-    )
-    
-    # Toggle Hybrid search
-    is_hybrid = st.sidebar.toggle(
-        "Bật Hybrid Search", 
-        value=HYBRID_SEARCH,
-        help="Kết hợp FAISS (ngữ nghĩa) và BM25 (từ khóa chính xác) để nâng cao chất lượng tìm kiếm."
-    )
-    
-    # Score Threshold slider
-    th_score = st.sidebar.slider(
-        "Ngưỡng Lọc (Score Threshold)", 
-        min_value=0.5, 
-        max_value=2.0, 
-        value=SCORE_THRESHOLD, 
-        step=0.1,
-        help="Chỉ áp dụng khi tắt Hybrid Search. Giá trị càng nhỏ lọc càng khắt khe."
-    )
-    
-    # Temperature slider
-    temp = st.sidebar.slider(
-        "Độ sáng tạo (Temperature)", 
-        min_value=0.0, 
-        max_value=1.0, 
-        value=TEMPERATURE, 
-        step=0.05,
-        help="Thấp hơn = câu trả lời tập trung và logic; Cao hơn = sáng tạo và đa dạng."
-    )
-
-    # Dynamic cập nhật cấu hình vào config hệ thống thông qua override
-    import src.config as cfg
-    cfg.OLLAMA_MODEL_NAME = model_name
-    cfg.HYBRID_SEARCH = is_hybrid
-    cfg.SCORE_THRESHOLD = th_score
-    cfg.TEMPERATURE = temp
-
-    # Nút dọn dẹp lịch sử
-    st.sidebar.markdown("---")
-    if st.sidebar.button("🗑️ Xóa lịch sử chat", use_container_width=True):
-        st.session_state.chat_messages = []
-        st.session_state.bot_memory.clear()
-        st.toast("Đã xóa sạch lịch sử trò chuyện!", icon="🗑️")
-        st.rerun()
-
-    # 5. HIỂN THỊ LỊCH SỬ CHAT TRÊN GIAO DIỆN
-    for msg in st.session_state.chat_messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-
-    # 6. NHẬN CÂU HỎI MỚI TỪ HỌC VIÊN
-    if user_query := st.chat_input("Hỏi tôi về ngữ pháp, từ vựng hoặc đề thi TOEIC Part 5..."):
+    # 4. Giao diện trống (Hero Section & Cụm Ô Nhập Liệu Trung Tâm)
+    if len(st.session_state.chat_messages) == 0:
+        # Badge & Hero Text
+        st.markdown("""
+        <div class="hero-container">
+            <div class="badge-container">
+                <span class="hero-badge">✦ Tự học TOEIC hiệu quả</span>
+            </div>
+            <div class="hero-title">TOEIC Master</div>
+            <div class="hero-subtitle">Luyện thi cá nhân hóa hoàn toàn offline. Đặt câu hỏi để nhận ngay lời giải thích chi tiết.</div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Hiển thị câu hỏi của user
+        # Central Input Box
+        st.markdown('<div class="input-card">', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="input-card-header">
+            <span class="header-left">📚 Kho RAG: <strong>{doc_count}</strong> chunks</span>
+            <span class="header-right">⚡ Powered by Local LLM</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Form nhập liệu trung tâm
+        with st.form("hero_form", clear_on_submit=True):
+            hero_query = st.text_input(
+                "Query Input",
+                placeholder="Hỏi tôi về ngữ pháp, từ vựng hoặc đề thi TOEIC Part 5...",
+                label_visibility="collapsed",
+                key="hero_query_input"
+            )
+            
+            col_clear, col_space, col_submit = st.columns([2.5, 6, 2.5])
+            with col_clear:
+                st.markdown('<div class="clear-btn-wrapper">', unsafe_allow_html=True)
+                clear_clicked = st.form_submit_button("🗑️ Clear")
+                st.markdown('</div>', unsafe_allow_html=True)
+            with col_submit:
+                st.markdown('<div class="send-btn-wrapper">', unsafe_allow_html=True)
+                submit_clicked = st.form_submit_button("Gửi ↗")
+                st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True) # End of input-card
+        
+        # Xử lý Clear History từ Hero Box
+        if clear_clicked:
+            st.session_state.chat_messages = []
+            st.session_state.bot_memory.clear()
+            st.toast("Đã xóa sạch lịch sử trò chuyện!", icon="🗑️")
+            safe_rerun()
+            
+        # Xử lý Submit từ Hero Box
+        if submit_clicked and hero_query:
+            st.session_state.pending_query = hero_query
+            safe_rerun()
+
+        # Cụm Prompt Gợi ý (Chips)
+        st.markdown('<div class="suggestion-group-title">💡 Gợi ý chủ đề câu hỏi:</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chip-group">', unsafe_allow_html=True)
+        col_s1, col_s2, col_s3 = st.columns(3)
+        with col_s1:
+            if st.button("📝 Phân biệt Since & For trong HTHT", key="sug_since_for", use_container_width=True):
+                st.session_state.pending_query = "Phân biệt cách dùng Since và For trong thì hiện tại hoàn thành, cho ví dụ minh họa."
+                safe_rerun()
+        with col_s2:
+            if st.button("✏️ Giải thích cấu trúc Despite/Although", key="sug_despite_although", use_container_width=True):
+                st.session_state.pending_query = "Giải thích cấu trúc ngữ pháp và cách dùng của Despite, In spite of, Although, Even though."
+                safe_rerun()
+        with col_s3:
+            if st.button("📖 Đề thi Part 5: Từ loại (Gerund)", key="sug_gerund", use_container_width=True):
+                st.session_state.pending_query = "Giải thích quy tắc khi nào dùng Danh động từ (Gerund) sau giới từ trong bài thi TOEIC Part 5."
+                safe_rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # 5. Giao diện Chat đã có tin nhắn
+    else:
+        # Hiển thị lịch sử chat
+        for msg in st.session_state.chat_messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+                
+        # Nút clear nổi ở góc dưới khi chat đang hoạt động
+        st.markdown('<div class="clear-btn-container">', unsafe_allow_html=True)
+        if st.button("🗑️ Clear", key="clear_chat_active"):
+            st.session_state.chat_messages = []
+            st.session_state.bot_memory.clear()
+            st.toast("Đã xóa sạch lịch sử trò chuyện!", icon="🗑️")
+            safe_rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # 6. Xử lý nhận câu hỏi mới (từ st.chat_input hoặc pending_query)
+    user_query = st.chat_input("Hỏi tôi về ngữ pháp, từ vựng hoặc đề thi TOEIC Part 5...")
+    
+    if "pending_query" in st.session_state and st.session_state.pending_query:
+        user_query = st.session_state.pending_query
+        del st.session_state.pending_query  # Xóa câu hỏi chờ
+
+    if user_query:
+        # Thêm câu hỏi của user vào danh sách hiển thị
         st.session_state.chat_messages.append({"role": "user", "content": user_query})
+        st.session_state.processing_query = user_query
+        safe_rerun()
+
+    # Xử lý sinh phản hồi từ LLM
+    if "processing_query" in st.session_state and st.session_state.processing_query:
+        query_to_process = st.session_state.processing_query
+        del st.session_state.processing_query
+
+        # Hiển thị toàn bộ lịch sử và tin nhắn mới trước khi stream
+        for msg in st.session_state.chat_messages[:-1]:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+        
+        # Hiển thị tin nhắn user cuối cùng
         with st.chat_message("user"):
-            st.markdown(user_query)
+            st.markdown(query_to_process)
 
         # Kiểm tra lệnh thoát
-        if user_query.lower() in ('exit', 'quit', 'thoat', 'thoát'):
+        if query_to_process.lower() in ('exit', 'quit', 'thoat', 'thoát'):
             goodbye_msg = "👋 Cảm ơn bạn đã học cùng TOEIC Master! Bạn có thể đóng tab trình duyệt này để kết thúc phiên học tập. Hẹn gặp lại bạn và chúc bạn thi tốt! 🎯"
             st.session_state.chat_messages.append({"role": "assistant", "content": goodbye_msg})
             with st.chat_message("assistant"):
@@ -267,28 +522,27 @@ def main():
 
             try:
                 if STREAM_OUTPUT:
-                    # Stream phản hồi thời gian thực
-                    token_generator = stream_bot_response(user_query, history_str)
+                    token_generator = stream_bot_response(query_to_process, history_str)
                     for token in token_generator:
                         full_response += token
                         response_placeholder.markdown(full_response + "▌")
-                    # Hiển thị text sạch sau khi stream hoàn tất
                     response_placeholder.markdown(full_response)
                 else:
-                    # Xử lý blocking
                     with st.spinner("Đang suy luận..."):
-                        full_response = get_bot_response(user_query, history_str)
+                        full_response = get_bot_response(query_to_process, history_str)
                         response_placeholder.markdown(full_response)
 
                 # Lưu vào bộ nhớ hiển thị UI
                 st.session_state.chat_messages.append({"role": "assistant", "content": full_response})
                 # Lưu vào bộ nhớ context của AI
-                st.session_state.bot_memory.add_turn(user_query, full_response)
+                st.session_state.bot_memory.add_turn(query_to_process, full_response)
 
             except Exception as e:
                 err_text = f"❌ **Đã xảy ra lỗi:** {e}\n\n*Vui lòng kiểm tra lại kết nối Ollama bằng lệnh `ollama serve`.*"
                 st.error(err_text)
                 logger.error("Lỗi sinh phản hồi: %s", e, exc_info=True)
+            
+            safe_rerun()
 
 
 if __name__ == "__main__":
