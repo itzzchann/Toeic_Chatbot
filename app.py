@@ -43,7 +43,7 @@ logger = logging.getLogger("streamlit_app")
 
 
 # ==========================================
-# CUSTOM CSS FOR LANDING PAGE AI DESIGN (Glassmorphism & Sleek Dark Video Overlay)
+# CUSTOM CSS FOR GEMINI-STYLE & NARROW DESIGN (No avatars, glassmorphism, right-aligned user)
 # ==========================================
 custom_css = """
 <style>
@@ -94,9 +94,9 @@ custom_css = """
         visibility: hidden !important;
     }
 
-    /* Container Padding & Max-Width */
+    /* Container Padding & Narrow Max-Width (700px như ảnh tham chiếu) */
     [data-testid="stAppViewBlockContainer"] {
-        max-width: 850px !important;
+        max-width: 700px !important;
         padding-top: 3rem !important;
         padding-bottom: 7rem !important;
         margin: 0 auto !important;
@@ -204,7 +204,7 @@ custom_css = """
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         color: #94a3b8 !important;
         border-radius: 12px !important;
-        padding: 8px 16px !important;
+        padding: 10px 20px !important;
         transition: all 0.2s ease !important;
     }
     .clear-btn-wrapper button:hover {
@@ -219,7 +219,7 @@ custom_css = """
         color: #0f172a !important;
         border-radius: 12px !important;
         font-weight: 600 !important;
-        padding: 8px 20px !important;
+        padding: 10px 20px !important;
         transition: all 0.2s ease !important;
         box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15) !important;
         width: 100% !important;
@@ -265,25 +265,40 @@ custom_css = """
         margin-bottom: 1.8rem !important;
     }
 
+    /* Gỡ bỏ hoàn toàn Avatar người hỏi và chatbot */
+    [data-testid="stChatMessageAvatar"] {
+        display: none !important;
+    }
+
     [data-testid="stChatMessageContent"] {
-        border-radius: 18px !important;
-        padding: 16px 20px !important;
+        padding: 0px !important;
+        margin-left: 0px !important;
     }
 
-    /* User Bubble Inner Message */
+    /* User Bubble (Căn phải, dạng box kính mờ gọn gàng) */
+    [data-testid="stChatMessageUser"] {
+        flex-direction: row-reverse !important;
+    }
     [data-testid="stChatMessageUser"] [data-testid="stChatMessageContent"] {
-        background-color: rgba(56, 189, 248, 0.06) !important;
-        border: 1px solid rgba(56, 189, 248, 0.15) !important;
-        color: #f0f9ff !important;
-        box-shadow: 0 4px 15px rgba(56, 189, 248, 0.03) !important;
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px 20px 4px 20px !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 15px rgba(255, 255, 255, 0.02) !important;
+        padding: 12px 20px !important;
+        max-width: 85% !important;
     }
 
-    /* Assistant Bubble Inner Message */
+    /* Assistant Bubble (Phong cách Gemini: Trơn, không viền, không nền, chữ chạy trực tiếp trên nền video) */
     [data-testid="stChatMessageAssistant"] [data-testid="stChatMessageContent"] {
-        background-color: rgba(129, 140, 248, 0.05) !important;
-        border: 1px solid rgba(129, 140, 248, 0.15) !important;
-        color: #f5f3ff !important;
-        box-shadow: 0 6px 20px rgba(129, 140, 248, 0.03) !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0px !important;
+        color: #f1f5f9 !important;
+        font-size: 1.05rem !important;
+        line-height: 1.6 !important;
+        width: 100% !important;
     }
 
     /* Customize bottom chat input (Active State) */
@@ -307,7 +322,7 @@ custom_css = """
         bottom: 95px;
         left: 50%;
         transform: translateX(-50%);
-        width: 850px;
+        width: 700px;
         max-width: 90%;
         z-index: 999;
         display: flex;
@@ -411,23 +426,26 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         
-        # Form nhập liệu trung tâm
+        # Form nhập liệu trung tâm (Nằm ngang giống Gemini/Search box)
         with st.form("hero_form", clear_on_submit=True):
-            hero_query = st.text_input(
-                "Query Input",
-                placeholder="Hỏi tôi về ngữ pháp, từ vựng hoặc đề thi TOEIC Part 5...",
-                label_visibility="collapsed",
-                key="hero_query_input"
-            )
+            col_input, col_send = st.columns([8.5, 1.5])
+            with col_input:
+                hero_query = st.text_input(
+                    "Query Input",
+                    placeholder="Hỏi tôi về ngữ pháp, từ vựng hoặc đề thi TOEIC Part 5...",
+                    label_visibility="collapsed",
+                    key="hero_query_input"
+                )
+            with col_send:
+                st.markdown('<div class="send-btn-wrapper">', unsafe_allow_html=True)
+                submit_clicked = st.form_submit_button("Send ↗")
+                st.markdown('</div>', unsafe_allow_html=True)
             
-            col_clear, col_space, col_submit = st.columns([2.5, 6, 2.5])
+            # Footer hàng dưới chứa nút Clear
+            col_clear, col_info = st.columns([2.5, 9.5])
             with col_clear:
                 st.markdown('<div class="clear-btn-wrapper">', unsafe_allow_html=True)
                 clear_clicked = st.form_submit_button("🗑️ Clear")
-                st.markdown('</div>', unsafe_allow_html=True)
-            with col_submit:
-                st.markdown('<div class="send-btn-wrapper">', unsafe_allow_html=True)
-                submit_clicked = st.form_submit_button("Gửi ↗")
                 st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True) # End of input-card
         
