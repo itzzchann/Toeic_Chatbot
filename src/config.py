@@ -10,9 +10,10 @@ PROJECT_ROOT = Path(__file__).parent.parent
 # ==========================================
 # 1. HẰNG SỐ CẤU HÌNH HỆ THỐNG
 # ==========================================
-DEBUG_MODE = True
+DEBUG_MODE = True      # True = in log ra console; False = chỉ ghi file
 MAX_RETRIES = 3
 RETRY_DELAY = 2
+STREAM_OUTPUT = True   # True = streaming từng token; False = chờ toàn bộ rồi in
 
 # ==========================================
 # MODEL & DATABASE CONFIG
@@ -22,6 +23,9 @@ OLLAMA_MODEL_NAME = "gemma2"
 TEMPERATURE = 0.2
 TOP_P = 0.85
 TOP_K_RETRIEVE = 5
+# Ngưỡng L2 distance của FAISS: chunk có score > ngưỡng này sẽ bị loại bỏ.
+# L2 distance càng thấp = càng giống nhau. Ngưỡng hợp lý cho multilingual-e5: 1.0 - 1.5
+SCORE_THRESHOLD = 1.2
 FAISS_DB_PATH = str(PROJECT_ROOT / "data")  # Đường dẫn tuyệt đối, chạy từ đâu cũng được
 
 # ==========================================
