@@ -32,14 +32,15 @@ def _get_chain():
         logger.info("[ASK] Khoi tao chain lan dau...")
         llm = get_llm()
         prompt = PromptTemplate(
-            input_variables=["system_prompt", "context", "question"],
+            input_variables=["system_prompt", "context", "question", "history"],
             template=PROMPT_TEMPLATE,
         )
         _chain = (
             {
                 "system_prompt": lambda x: SYSTEM_PROMPT_TOEIC,
-                "context": lambda x: retrieve_context(x),  # Truy xuất FAISS
-                "question": RunnablePassthrough(),           # Câu hỏi gốc
+                "context": lambda x: retrieve_context(x["question"]),  # Truy xuất FAISS bằng câu hỏi gốc
+                "history": lambda x: x["history"],
+                "question": lambda x: x["question"],
             }
             | prompt
             | llm
@@ -49,22 +50,22 @@ def _get_chain():
     return _chain
 
 
-def get_bot_response(user_query: str) -> str:
+def get_bot_response(user_query: str, history: str = "") -> str:
     """
     Nhận câu hỏi, trả về toàn bộ câu trả lời dưới dạng chuỗi (blocking).
     Dùng khi STREAM_OUTPUT = False.
     """
     logger.info("[ASK] Nhan cau hoi (invoke mode): %s", user_query[:80])
-    return _get_chain().invoke(user_query)
+    return _get_chain().invoke({"question": user_query, "history": history})
 
 
-def stream_bot_response(user_query: str):
+def stream_bot_response(user_query: str, history: str = ""):
     """
     Generator: yield từng token khi LLM sinh ra.
     Dùng khi STREAM_OUTPUT = True — người dùng thấy text xuất hiện dần.
     """
     logger.info("[ASK] Nhan cau hoi (stream mode): %s", user_query[:80])
-    yield from _get_chain().stream(user_query)
+    yield from _get_chain().stream({"question": user_query, "history": history})
 
 
 # Chạy thử trực tiếp trên Terminal

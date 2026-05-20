@@ -46,6 +46,13 @@ TOP_K_BM25  = 5
 TOP_K_FAISS = 5
 
 # ==========================================
+# CONVERSATIONAL MEMORY CONFIG
+# ==========================================
+# Lưu trữ hội thoại để AI có thể hiểu bối cảnh của các câu hỏi tiếp nối.
+MEMORY_ENABLED = True
+MAX_HISTORY_TURNS = 5
+
+# ==========================================
 # 2. SYSTEM PROMPT (LUẬT CHƠI CỦA AI)
 # ==========================================
 SYSTEM_PROMPT_TOEIC = """# ROLE (VAI TRÒ)
@@ -96,6 +103,11 @@ Hãy phân loại <CÂU_HỎI_HỌC_VIÊN> vào 1 trong 3 trường hợp dướ
 # Lưu ý: Các biến {system_prompt}, {context}, {question} phải khớp với khai báo input_variables trong ask.py
 PROMPT_TEMPLATE = """
 {system_prompt}
+
+---
+<LỊCH_SỬ_HỘI_THOẠI>
+{history}
+</LỊCH_SỬ_HỘI_THOẠI>
 
 ---
 <TÀI_LIỆU_THAM_KHẢO>

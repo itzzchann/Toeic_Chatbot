@@ -12,6 +12,7 @@ import logging
 from src.ask import get_bot_response, stream_bot_response
 from src.rag import get_vector_db, _get_bm25_retriever
 from src.config import DEBUG_MODE, STREAM_OUTPUT, HYBRID_SEARCH
+from src.memory import ConversationMemory
 
 
 # ==========================================
@@ -69,10 +70,14 @@ def main():
     print("   TOEIC MASTER - Gia su TOEIC AI   ")
     print("=" * 50)
     print("Go 'exit' hoac 'thoat' de thoat chuong trinh.")
+    print("Go 'xoa', 'xóa' hoac 'clear' de xoa lich su chat.")
     print()
 
     if not startup_check():
         sys.exit(1)
+
+    # Khởi tạo bộ nhớ hội thoại
+    memory = ConversationMemory()
 
     while True:
         try:
@@ -85,19 +90,32 @@ def main():
                 print("\nTam biet! Chuc ban hoc tot va dat diem TOEIC cao!")
                 break
 
+            if user_query.lower() in ('xoa', 'xóa', 'clear', 'reset'):
+                memory.clear()
+                print("\n--> Da xoa sach lich su tro chuyen! AI se tra loi nhu luot dau tien.\n")
+                continue
+
+            # Lấy lịch sử dạng chuỗi định dạng
+            history_str = memory.format_for_prompt()
+
             print("\n" + "=" * 50)
             print("TOEIC MASTER TRA LOI:")
             print("=" * 50)
 
+            full_response = ""
             if STREAM_OUTPUT:
                 # Streaming: in từng token ngay khi LLM sinh ra
-                for token in stream_bot_response(user_query):
+                for token in stream_bot_response(user_query, history_str):
                     print(token, end="", flush=True)
+                    full_response += token
                 print()  # Xuống dòng sau khi stream xong
             else:
                 # Blocking: chờ toàn bộ rồi in một lần
-                answer = get_bot_response(user_query)
-                print(answer)
+                full_response = get_bot_response(user_query, history_str)
+                print(full_response)
+
+            # Lưu lượt hội thoại hiện tại vào memory
+            memory.add_turn(user_query, full_response)
 
             print("=" * 50 + "\n")
 
