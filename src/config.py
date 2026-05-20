@@ -29,6 +29,23 @@ SCORE_THRESHOLD = 1.2
 FAISS_DB_PATH = str(PROJECT_ROOT / "data")  # Đường dẫn tuyệt đối, chạy từ đâu cũng được
 
 # ==========================================
+# HYBRID SEARCH CONFIG
+# ==========================================
+# Bật Hybrid Search (FAISS semantic + BM25 keyword) thay vì chỉ dùng FAISS.
+# BM25 hiệu quả hơn với các thuật ngữ kỹ thuật cụ thể (vd: "gerund", "subjunctive").
+HYBRID_SEARCH = True
+
+# Trọng số cho EnsembleRetriever (tổng phải = 1.0).
+# Tăng FAISS_WEIGHT nếu muốn ưu tiên hiểu ngữ nghĩa.
+# Tăng BM25_WEIGHT nếu muốn ưu tiên khớp từ khóa chính xác.
+BM25_WEIGHT  = 0.4   # Keyword matching
+FAISS_WEIGHT = 0.6   # Semantic matching
+
+# Số chunk mỗi retriever lấy — EnsembleRetriever sẽ merge rồi deduplicate.
+TOP_K_BM25  = 5
+TOP_K_FAISS = 5
+
+# ==========================================
 # 2. SYSTEM PROMPT (LUẬT CHƠI CỦA AI)
 # ==========================================
 SYSTEM_PROMPT_TOEIC = """# ROLE (VAI TRÒ)

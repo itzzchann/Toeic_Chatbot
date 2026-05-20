@@ -10,8 +10,8 @@ Cải tiến:
 import sys
 import logging
 from src.ask import get_bot_response, stream_bot_response
-from src.rag import get_vector_db
-from src.config import DEBUG_MODE, STREAM_OUTPUT
+from src.rag import get_vector_db, _get_bm25_retriever
+from src.config import DEBUG_MODE, STREAM_OUTPUT, HYBRID_SEARCH
 
 
 # ==========================================
@@ -48,6 +48,8 @@ def startup_check():
     print("Dang khoi dong he thong...")
     try:
         get_vector_db()
+        if HYBRID_SEARCH:
+            _get_bm25_retriever()   # Warm-up BM25 index ngay từ đầu
         print("He thong san sang!\n")
         return True
     except FileNotFoundError as e:
