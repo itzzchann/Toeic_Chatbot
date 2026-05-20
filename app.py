@@ -3,6 +3,13 @@ APP.PY - Giao diện Web UI bằng Streamlit cho TOEIC Master Chatbot
 Chạy lệnh: streamlit run app.py
 """
 
+# Khắc phục lỗi xung đột giữa Streamlit File Watcher và PyTorch (torch.classes)
+try:
+    import torch
+    torch.classes.__path__ = []
+except Exception:
+    pass
+
 import sys
 import streamlit as st
 import logging
