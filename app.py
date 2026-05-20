@@ -244,6 +244,14 @@ def main():
         with st.chat_message("user"):
             st.markdown(user_query)
 
+        # Kiểm tra lệnh thoát
+        if user_query.lower() in ('exit', 'quit', 'thoat', 'thoát'):
+            goodbye_msg = "👋 Cảm ơn bạn đã học cùng TOEIC Master! Bạn có thể đóng tab trình duyệt này để kết thúc phiên học tập. Hẹn gặp lại bạn và chúc bạn thi tốt! 🎯"
+            st.session_state.chat_messages.append({"role": "assistant", "content": goodbye_msg})
+            with st.chat_message("assistant"):
+                st.markdown(goodbye_msg)
+            st.stop()
+
         # Lấy lịch sử dạng chuỗi đưa vào context prompt
         history_str = st.session_state.bot_memory.format_for_prompt()
 
