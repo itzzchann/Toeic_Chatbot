@@ -94,9 +94,9 @@ custom_css = """
         visibility: hidden !important;
     }
 
-    /* Container Padding & Narrow Max-Width (700px như ảnh tham chiếu) */
+    /* Container Padding & Narrow Max-Width (Tăng kích thước to hơn tí lên 760px) */
     .block-container, [data-testid="stAppViewBlockContainer"] {
-        max-width: 700px !important;
+        max-width: 760px !important;
         padding-top: 3rem !important;
         padding-bottom: 7rem !important;
         margin: 0 auto !important;
@@ -167,10 +167,7 @@ custom_css = """
     }
     .header-left {
         color: #cbd5e1;
-        font-weight: 400;
-    }
-    .header-left strong {
-        color: #818cf8;
+        font-weight: 500;
     }
     .header-right {
         font-weight: 500;
@@ -262,8 +259,12 @@ custom_css = """
         margin-bottom: 1.8rem !important;
     }
 
-    /* Gỡ bỏ hoàn toàn Avatar người hỏi và chatbot */
-    [data-testid="stChatMessageAvatar"] {
+    /* Gỡ bỏ hoàn toàn mọi loại Avatar trong khung chat để sạch sẽ */
+    [data-testid="stChatMessageAvatar"],
+    [data-testid="chatAvatar"],
+    div[class*="ChatMessageAvatar"],
+    div[class*="chatAvatar"],
+    img[class*="Avatar"] {
         display: none !important;
     }
 
@@ -274,6 +275,8 @@ custom_css = """
 
     /* User Bubble (Căn phải, dạng box kính mờ gọn gàng) */
     [data-testid="stChatMessageUser"] {
+        display: flex !important;
+        justify-content: flex-end !important;
         flex-direction: row-reverse !important;
     }
     [data-testid="stChatMessageUser"] [data-testid="stChatMessageContent"] {
@@ -287,6 +290,10 @@ custom_css = """
     }
 
     /* Assistant Bubble (Phong cách Gemini: Trơn, không viền, không nền, chữ chạy trực tiếp trên nền video) */
+    [data-testid="stChatMessageAssistant"] {
+        display: flex !important;
+        justify-content: flex-start !important;
+    }
     [data-testid="stChatMessageAssistant"] [data-testid="stChatMessageContent"] {
         background-color: transparent !important;
         border: none !important;
@@ -296,6 +303,7 @@ custom_css = """
         font-size: 1.05rem !important;
         line-height: 1.6 !important;
         width: 100% !important;
+        max-width: 100% !important;
     }
 
     /* Định dạng độ rộng và căn giữa thanh Chat Input phía dưới (Active State) */
@@ -304,7 +312,7 @@ custom_css = """
         bottom: 30px !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
-        width: 700px !important;
+        width: 760px !important;
         max-width: 90% !important;
         background: rgba(15, 23, 42, 0.45) !important;
         backdrop-filter: blur(25px) !important;
@@ -326,7 +334,7 @@ custom_css = """
         bottom: 95px;
         left: 50%;
         transform: translateX(-50%);
-        width: 700px;
+        width: 760px;
         max-width: 90%;
         z-index: 999;
         display: flex;
@@ -423,9 +431,9 @@ def main():
         
         # Central Input Box (Được bọc hoàn toàn bởi st.form để nhận background glassmorphism)
         with st.form("hero_form", clear_on_submit=True):
-            st.markdown(f"""
+            st.markdown("""
             <div class="input-card-header">
-                <span class="header-left">📚 Kho RAG: <strong>{doc_count}</strong> chunks</span>
+                <span class="header-left">🎓 Gia sư TOEIC AI</span>
                 <span class="header-right">⚡ Powered by Local LLM</span>
             </div>
             """, unsafe_allow_html=True)
@@ -497,8 +505,10 @@ def main():
             safe_rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 6. Xử lý nhận câu hỏi mới (từ st.chat_input hoặc pending_query)
-    user_query = st.chat_input("Hỏi tôi về ngữ pháp, từ vựng hoặc đề thi TOEIC Part 5...")
+    # 6. Xử lý nhận câu hỏi mới (chỉ hiển thị chat_input khi đã có tin nhắn để tránh bị trùng lặp)
+    user_query = None
+    if len(st.session_state.chat_messages) > 0:
+        user_query = st.chat_input("Hỏi tôi về ngữ pháp, từ vựng hoặc đề thi TOEIC Part 5...")
     
     if "pending_query" in st.session_state and st.session_state.pending_query:
         user_query = st.session_state.pending_query
