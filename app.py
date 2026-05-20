@@ -10,6 +10,11 @@ try:
 except Exception:
     pass
 
+# Tắt các cảnh báo (UserWarning) lặp đi lặp lại từ thư viện transformers khi Streamlit quét file
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, message=".*Accessing.*__path__.*")
+warnings.filterwarnings("ignore", category=UserWarning, message=".*alias will be removed.*")
+
 import sys
 import streamlit as st
 import logging
