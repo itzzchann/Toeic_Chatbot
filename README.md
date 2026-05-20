@@ -75,8 +75,16 @@ pip install -r requirements.txt
 
 ### Bước 3 — Chạy chatbot
 
+Bạn có thể chạy chatbot dưới dạng giao diện dòng lệnh (CLI) hoặc giao diện web (Streamlit):
+
+**Chạy CLI:**
 ```bash
 python main.py
+```
+
+**Chạy Web UI (Khuyến nghị):**
+```bash
+streamlit run app.py
 ```
 
 ---
@@ -110,10 +118,10 @@ TOEIC MASTER TRA LOI:
 
 ## 🗺️ Roadmap (dự kiến)
 
-- [ ] Giao diện web (Streamlit / Gradio)
+- [x] Giao diện web (Streamlit)
+- [x] Tích hợp lịch sử chat (Conversational Memory)
 - [ ] Hỗ trợ upload file PDF cá nhân
 - [ ] Thêm dữ liệu TOEIC Part 6, 7
-- [ ] Tích hợp lịch sử chat
 
 ---
 
