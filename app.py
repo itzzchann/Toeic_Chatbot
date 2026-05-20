@@ -19,11 +19,11 @@ import sys
 import streamlit as st
 import logging
 
-# Thiết lập cấu hình trang Streamlit đầu tiên (Bắt buộc phải gọi trước các phần khác)
+# Thiết lập cấu hình trang Streamlit centered để tối ưu giao diện giống Gemini
 st.set_page_config(
     page_title="TOEIC Master — Gia sư TOEIC AI",
     page_icon="🎓",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="collapsed"
 )
 
@@ -76,7 +76,7 @@ custom_css = """
         left: 0;
         width: 100%;
         height: 100%;
-        background: radial-gradient(circle at center, rgba(15, 23, 42, 0.4) 0%, rgba(8, 10, 20, 0.85) 100%);
+        background: radial-gradient(circle at center, rgba(15, 23, 42, 0.45) 0%, rgba(8, 10, 20, 0.85) 100%);
         backdrop-filter: blur(8px);
         z-index: -99;
     }
@@ -95,7 +95,7 @@ custom_css = """
     }
 
     /* Container Padding & Narrow Max-Width (700px như ảnh tham chiếu) */
-    [data-testid="stAppViewBlockContainer"] {
+    .block-container, [data-testid="stAppViewBlockContainer"] {
         max-width: 700px !important;
         padding-top: 3rem !important;
         padding-bottom: 7rem !important;
@@ -124,7 +124,7 @@ custom_css = """
     .hero-container {
         text-align: center;
         margin-top: 4vh;
-        margin-bottom: 2.5rem;
+        margin-bottom: 2rem;
     }
     .hero-title {
         font-size: 3.5rem;
@@ -143,16 +143,18 @@ custom_css = """
         line-height: 1.6;
     }
 
-    /* Glassmorphic Central Input Card (Empty State) */
-    .input-card {
+    /* Style the Streamlit Form to look like the central card */
+    div[data-testid="stForm"] {
         background: rgba(15, 23, 42, 0.35) !important;
         backdrop-filter: blur(25px) !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 24px !important;
-        padding: 22px !important;
+        padding: 24px !important;
         box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3) !important;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.5rem !important;
+        width: 100% !important;
     }
+
     .input-card-header {
         display: flex;
         justify-content: space-between;
@@ -175,26 +177,19 @@ custom_css = """
         color: #818cf8;
     }
 
-    /* Remove default Streamlit border for form */
-    div[data-testid="stForm"] {
-        border: none !important;
-        padding: 0 !important;
-        background: transparent !important;
-    }
-
-    /* Style text input inside card */
-    div[data-testid="stTextInput"] input {
-        background-color: rgba(255, 255, 255, 0.02) !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    /* Style text input inside form */
+    div[data-testid="stForm"] div[data-testid="stTextInput"] input {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 12px !important;
         color: #f8fafc !important;
-        font-size: 1.1rem !important;
-        padding: 14px 18px !important;
+        font-size: 1rem !important;
+        padding: 12px 16px !important;
         transition: all 0.2s ease !important;
     }
-    div[data-testid="stTextInput"] input:focus {
+    div[data-testid="stForm"] div[data-testid="stTextInput"] input:focus {
         border-color: rgba(129, 140, 248, 0.4) !important;
-        background-color: rgba(255, 255, 255, 0.04) !important;
+        background-color: rgba(255, 255, 255, 0.05) !important;
         box-shadow: 0 0 15px rgba(129, 140, 248, 0.1) !important;
     }
 
@@ -204,7 +199,8 @@ custom_css = """
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         color: #94a3b8 !important;
         border-radius: 12px !important;
-        padding: 10px 20px !important;
+        padding: 8px 16px !important;
+        font-size: 0.85rem !important;
         transition: all 0.2s ease !important;
     }
     .clear-btn-wrapper button:hover {
@@ -223,6 +219,7 @@ custom_css = """
         transition: all 0.2s ease !important;
         box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15) !important;
         width: 100% !important;
+        height: auto !important;
     }
     .send-btn-wrapper button:hover {
         background: #cbd5e1 !important;
@@ -301,14 +298,21 @@ custom_css = """
         width: 100% !important;
     }
 
-    /* Customize bottom chat input (Active State) */
+    /* Định dạng độ rộng và căn giữa thanh Chat Input phía dưới (Active State) */
     div[data-testid="stChatInputContainer"] {
+        position: fixed !important;
+        bottom: 30px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 700px !important;
+        max-width: 90% !important;
         background: rgba(15, 23, 42, 0.45) !important;
         backdrop-filter: blur(25px) !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 20px !important;
         box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3) !important;
         padding: 10px 15px !important;
+        z-index: 999 !important;
     }
     div[data-testid="stChatInputContainer"] textarea {
         background-color: transparent !important;
@@ -417,17 +421,16 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         
-        # Central Input Box
-        st.markdown('<div class="input-card">', unsafe_allow_html=True)
-        st.markdown(f"""
-        <div class="input-card-header">
-            <span class="header-left">📚 Kho RAG: <strong>{doc_count}</strong> chunks</span>
-            <span class="header-right">⚡ Powered by Local LLM</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Form nhập liệu trung tâm (Nằm ngang giống Gemini/Search box)
+        # Central Input Box (Được bọc hoàn toàn bởi st.form để nhận background glassmorphism)
         with st.form("hero_form", clear_on_submit=True):
+            st.markdown(f"""
+            <div class="input-card-header">
+                <span class="header-left">📚 Kho RAG: <strong>{doc_count}</strong> chunks</span>
+                <span class="header-right">⚡ Powered by Local LLM</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Khung nhập liệu nằm ngang
             col_input, col_send = st.columns([8.5, 1.5])
             with col_input:
                 hero_query = st.text_input(
@@ -441,13 +444,12 @@ def main():
                 submit_clicked = st.form_submit_button("Send ↗")
                 st.markdown('</div>', unsafe_allow_html=True)
             
-            # Footer hàng dưới chứa nút Clear
+            # Hàng dưới chứa nút Clear
             col_clear, col_info = st.columns([2.5, 9.5])
             with col_clear:
                 st.markdown('<div class="clear-btn-wrapper">', unsafe_allow_html=True)
                 clear_clicked = st.form_submit_button("🗑️ Clear")
                 st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True) # End of input-card
         
         # Xử lý Clear History từ Hero Box
         if clear_clicked:
