@@ -34,12 +34,12 @@ Thumbs.db
 desktop.ini
 
 # ==========================================
-# DỮ LIỆU / MODEL (nếu quá lớn thì dùng Git LFS)
+# DỮ LIỆU / MODEL
 # ==========================================
-# Bỏ comment dòng dưới nếu KHÔNG muốn đẩy Toeic_db/ lên GitHub
-# Toeic_db/
+# Bỏ comment dòng dưới nếu KHÔNG muốn đẩy data/ lên GitHub (file >100MB)
+# data/
 
-# HuggingFace model cache (thường nằm ở ~/.cache, nhưng đề phòng)
+# HuggingFace model cache
 *.bin
 *.safetensors
 
@@ -49,3 +49,8 @@ desktop.ini
 *.log
 *.tmp
 *.bak
+
+# ==========================================
+# STREAMLIT
+# ==========================================
+.streamlit/secrets.toml

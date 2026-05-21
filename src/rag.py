@@ -1,15 +1,6 @@
 """
 RAG.PY - Load FAISS vector database và tìm kiếm tài liệu liên quan
 
-Cải tiến:
-- Hybrid Search: kết hợp BM25 (keyword) + FAISS (semantic).
-  BM25 giỏi tìm thuật ngữ kỹ thuật chính xác (gerund, subjunctive, preposition...).
-  FAISS giỏi hiểu ngữ nghĩa / paraphrase.
-  Merge kết quả bằng Reciprocal Rank Fusion (RRF) tự implement — không phụ thuộc
-  thêm package, dễ tuning hơn EnsembleRetriever.
-- Singleton: FAISS DB và BM25 index chỉ khởi tạo 1 lần.
-- Score threshold: áp dụng khi HYBRID_SEARCH=False (FAISS-only mode).
-- Logging: toàn bộ debug log ghi vào file, không in ra console người dùng.
 """
 
 import os
