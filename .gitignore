@@ -54,3 +54,9 @@ desktop.ini
 # STREAMLIT
 # ==========================================
 .streamlit/secrets.toml
+
+# ==========================================
+# RAGAS EVALUATION REPORTS
+# ==========================================
+tests/ragas_eval/reports/
+
