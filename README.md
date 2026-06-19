@@ -1,16 +1,18 @@
 # 🎓 TOEIC Master — Gia sư TOEIC AI
 
-> Chatbot hỏi-đáp TOEIC thông minh, chạy **hoàn toàn offline** trên máy cá nhân, sử dụng kỹ thuật **RAG (Retrieval-Augmented Generation)** kết hợp **FAISS** và **Ollama**.
+> Chatbot hỏi-đáp TOEIC thông minh, chạy **hoàn toàn offline** trên máy cá nhân, sử dụng kỹ thuật **RAG (Retrieval-Augmented Generation)** kết hợp **Hybrid Search (FAISS + BM25)** và **Ollama**.
 
 ---
 
 ## ✨ Tính năng
 
-- 🔍 **RAG**: Truy xuất tài liệu TOEIC từ kho vector FAISS cục bộ để trả lời chính xác
+- 🔍 **Hybrid Search**: Kết hợp BM25 (keyword) + FAISS (semantic) với Reciprocal Rank Fusion
 - 🤖 **LLM offline**: Chạy model `gemma2` qua Ollama, không cần internet hay API key
+- 🖥️ **Web UI**: Giao diện Streamlit hiện đại, hỗ trợ streaming response
+- 🧠 **Conversational Memory**: Ghi nhớ lịch sử hội thoại trong phiên
 - 📚 **Phạm vi chuyên biệt**: Chỉ giải đáp ngữ pháp, từ vựng và bài thi TOEIC
 - 🛡️ **Chống prompt injection**: Có cơ chế bảo vệ system prompt
-- ♻️ **Singleton Pattern**: Load model & FAISS 1 lần duy nhất, tái sử dụng cho toàn phiên
+- ♻️ **Singleton + Cache**: Load model & FAISS 1 lần duy nhất, tái sử dụng cho toàn phiên
 
 ---
 
@@ -18,13 +20,15 @@
 
 ```
 TTNT/
-├── main.py               # Điểm vào chính — chạy chatbot CLI
+├── streamlit_app.py      # Điểm vào chính — Web UI Streamlit
 ├── requirements.txt      # Danh sách thư viện Python
 ├── src/
+│   ├── __init__.py
 │   ├── config.py         # Cấu hình model, đường dẫn, system prompt
 │   ├── model.py          # Khởi tạo Embedding model & LLM (Singleton)
-│   ├── rag.py            # Load FAISS DB, tìm kiếm tài liệu liên quan
-│   └── ask.py            # Pipeline RAG → Prompt → LLM → Output
+│   ├── rag.py            # Hybrid Search: FAISS + BM25 + RRF merge
+│   ├── ask.py            # Pipeline RAG → Prompt → LLM → Stream output
+│   └── memory.py         # Quản lý lịch sử hội thoại
 └── data/
     ├── index.faiss       # FAISS vector index
     └── index.pkl         # Metadata của các chunk tài liệu
@@ -73,53 +77,47 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Bước 3 — Chạy chatbot
+### Bước 3 — Chạy Web UI
 
 ```bash
-python main.py
+streamlit run streamlit_app.py
 ```
+
+Trình duyệt sẽ tự mở tại `http://localhost:8501`
+
+> ⏳ **Lần đầu chạy** sẽ mất 10–40s để load Embedding model và FAISS index vào RAM. Các lần sau sẽ nhanh hơn nhờ `@st.cache_resource`.
 
 ---
 
 ## 💬 Ví dụ sử dụng
 
 ```
-==================================================
-   TOEIC MASTER - Gia su TOEIC AI
-==================================================
-Go 'exit' hoac 'thoat' de thoat chuong trinh.
+Bạn: Despite ------- in the project, the team managed to meet the deadline.
+     A) participate  B) participating  C) participated  D) participation
 
-Dang khoi dong he thong...
-He thong san sang!
+Bot: **Đáp án đúng:** B) participating
 
-Ban muon hoi gi ve TOEIC: Despite ------- in the project, the team managed to meet the deadline.
-A) participate  B) participating  C) participated  D) participation
+     **Dịch nghĩa:** Mặc dù tham gia vào dự án, nhóm vẫn kịp deadline.
 
-==================================================
-TOEIC MASTER TRA LOI:
-==================================================
-**Đáp án đúng:** B) participating
-
-**Dịch nghĩa:** Mặc dù tham gia vào dự án, nhóm vẫn kịp deadline.
-
-**Giải thích chi tiết:** Sau "Despite" (giới từ), động từ phải ở dạng V-ing...
-==================================================
+     **Giải thích chi tiết:** Sau "Despite" (giới từ), động từ phải ở dạng V-ing...
 ```
 
 ---
 
 ## 🗺️ Roadmap (dự kiến)
 
-- [ ] Giao diện web (Streamlit / Gradio)
+- [x] Giao diện web (Streamlit)
+- [x] Hybrid Search (BM25 + FAISS + RRF)
+- [x] Tích hợp lịch sử chat (Conversational Memory)
+- [x] Streaming response từng token
 - [ ] Hỗ trợ upload file PDF cá nhân
 - [ ] Thêm dữ liệu TOEIC Part 6, 7
-- [ ] Tích hợp lịch sử chat
 
 ---
 
 ## ⚠️ Lưu ý
 
-- Phải **khởi động Ollama** (`ollama serve`) trước khi chạy `main.py`
+- Phải **khởi động Ollama** (`ollama serve`) trước khi chạy ứng dụng
 - Thư mục `data/` phải tồn tại với 2 file `index.faiss` và `index.pkl`
 - Dự án đang trong giai đoạn **phát triển**, chưa hoàn chỉnh
 
