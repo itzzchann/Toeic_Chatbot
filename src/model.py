@@ -3,8 +3,8 @@ MODEL.PY - Khởi tạo Embedding Model và LLM (Singleton Pattern)
 Chỉ load một lần duy nhất, tái sử dụng cho mọi câu hỏi tiếp theo.
 """
 
+from langchain_ollama import ChatOllama
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_ollama import OllamaLLM
 from src.config import EMBEDDING_MODEL_NAME, OLLAMA_MODEL_NAME, TEMPERATURE, TOP_P
 
 # ==========================================
@@ -30,17 +30,19 @@ def get_embedding_model() -> HuggingFaceEmbeddings:
     return _embedding_model
 
 
-def get_llm() -> OllamaLLM:
+def get_llm() -> ChatOllama:
     """
-    Trả về LLM (qwen2.5:7b) chạy offline qua Ollama.
+    Trả về LLM chạy offline qua Ollama.
     Singleton: chỉ khởi tạo 1 lần, tái dùng cho mọi lần gọi sau.
     Raises: ConnectionError nếu Ollama chưa được khởi động.
     """
     global _llm
     if _llm is None:
-        _llm = OllamaLLM(
+        _llm = ChatOllama(
             model=OLLAMA_MODEL_NAME,
             temperature=TEMPERATURE,
-            top_p=TOP_P
+            top_p=TOP_P,
+            num_ctx=8192,
+            num_predict=2048
         )
     return _llm

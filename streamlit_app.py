@@ -414,7 +414,7 @@ for lib in ("transformers", "httpx", "httpcore", "urllib3", "sentence_transforme
 # ==========================================
 @st.cache_resource(show_spinner=False)
 def load_system():
-    """Load FAISS + BM25 một lần, cache vào RAM."""
+    """Load Chroma + BM25 một lần, cache vào RAM."""
     db = get_vector_db()
     retriever = _get_bm25_retriever() if HYBRID_SEARCH else None
     return db, retriever
@@ -438,7 +438,7 @@ with st.sidebar:
     <div style="color:rgba(255,255,255,0.6); font-size:12px; line-height:1.6;">
     <b style="color:rgba(255,255,255,0.85)">AI TOEIC Chatbot</b><br>
     Gia sư TOEIC AI thông minh<br><br>
-    🔍 Hybrid Search (BM25 + FAISS)<br>
+    🔍 Hybrid Search (BM25 + Chroma)<br>
     ⚡ Streaming Response<br>
     🧠 Conversation Memory
     </div>
@@ -486,10 +486,10 @@ for msg in st.session_state.messages:
 # SUGGESTION CHIPS
 # ==========================================
 CHIPS = [
-    ("🎧 Luyện Part 3 Nghe",    "Hướng dẫn chiến thuật luyện Part 3 Nghe hiệu quả"),
-    ("📖 Ngữ pháp Part 5",      "Giải thích ngữ pháp quan trọng trong Part 5 TOEIC"),
-    ("✉️ Chiến thuật Part 6",   "Chiến thuật đọc email và điền từ Part 6"),
-    ("📝 Kiểm tra từ vựng",     "Gợi ý một số từ vựng TOEIC phổ biến cần nhớ"),
+    ("📖 Mệnh đề quan hệ",       "Mệnh đề quan hệ là gì?"),
+    ("❓ Cấu trúc ĐK loại 3",   "Cấu trúc câu điều kiện loại 3 là gì?"),
+    ("📝 'Look forward to'",    "'Look forward to' có nghĩa là gì?"),
+    ("⏳ Thì Quá khứ đơn",      "Công thức THÌ QUÁ KHỨ ĐƠN là gì?"),
 ]
 
 if st.session_state.show_chips and len(st.session_state.messages) <= 1:
