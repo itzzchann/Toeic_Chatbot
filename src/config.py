@@ -40,11 +40,11 @@ HYBRID_SEARCH = True
 # Tăng CHROMA_WEIGHT nếu muốn ưu tiên hiểu ngữ nghĩa.
 # Tăng BM25_WEIGHT nếu muốn ưu tiên khớp từ khóa chính xác.
 BM25_WEIGHT    = 0.7   # Tăng lên 0.7: thiên về tìm kiếm từ khóa chính xác (đặc biệt hữu ích với thuật ngữ tiếng Anh)
-FAISS_WEIGHT   = 0.3   # Giảm xuống 0.3: giảm bớt sự phụ thuộc vào tìm kiếm ngữ nghĩa Chroma
+CHROMA_WEIGHT  = 0.3   # Giảm xuống 0.3: giảm bớt sự phụ thuộc vào tìm kiếm ngữ nghĩa Chroma
 
 # Số chunk mỗi retriever lấy — EnsembleRetriever sẽ merge rồi deduplicate.
-TOP_K_BM25  = 15
-TOP_K_FAISS = 15
+TOP_K_BM25   = 15
+TOP_K_CHROMA = 15
 
 # ==========================================
 # CONVERSATIONAL MEMORY CONFIG

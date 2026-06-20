@@ -15,8 +15,8 @@ from src.config import (
     CHROMA_COLLECTION_NAME,
     TOP_K_RETRIEVE, SCORE_THRESHOLD,
     HYBRID_SEARCH,
-    BM25_WEIGHT, FAISS_WEIGHT,
-    TOP_K_BM25, TOP_K_FAISS,
+    BM25_WEIGHT, CHROMA_WEIGHT,
+    TOP_K_BM25, TOP_K_CHROMA,
 )
 
 logger = logging.getLogger(__name__)
@@ -136,7 +136,7 @@ def _reciprocal_rank_fusion(
 
     Công thức: score(doc) = Σ weight_i / (k + rank_i)
     - k=60: hằng số chuẩn của RRF, giảm ảnh hưởng của rank quá cao.
-    - weight_i: trọng số của từng retriever (BM25_WEIGHT, FAISS_WEIGHT).
+    - weight_i: trọng số của từng retriever (BM25_WEIGHT, CHROMA_WEIGHT).
     - Deduplicate bằng page_content hash.
 
     Trả về: list[Document] sắp xếp theo RRF score giảm dần.
@@ -254,8 +254,8 @@ def _retrieve_hybrid(query: str) -> str:
     try:
         if meta_filter:
             logger.info("[RAG][Hybrid] Ap dung metadata filter: %s", meta_filter)
-        # Sử dụng nguyên gốc query cho FAISS để không làm mất ngữ nghĩa
-        docs_and_scores = db.similarity_search_with_score(query, k=TOP_K_FAISS, filter=meta_filter)
+        # Sử dụng nguyên gốc query cho Chroma để không làm mất ngữ nghĩa
+        docs_and_scores = db.similarity_search_with_score(query, k=TOP_K_CHROMA, filter=meta_filter)
     except Exception as filter_err:
         # ChromaDB 1.x bug: metadata filter crash khi DB tạo bằng version cũ
         # Fallback về tìm không filter để không bị block
@@ -263,7 +263,7 @@ def _retrieve_hybrid(query: str) -> str:
             "[RAG][Hybrid] Metadata filter loi (%s) - fallback khong filter.",
             filter_err
         )
-        docs_and_scores = db.similarity_search_with_score(query, k=TOP_K_FAISS)
+        docs_and_scores = db.similarity_search_with_score(query, k=TOP_K_CHROMA)
         
     # Lọc chunk Chroma bằng SCORE_THRESHOLD
     chroma_docs = []
@@ -283,7 +283,7 @@ def _retrieve_hybrid(query: str) -> str:
     # 3. RRF merge
     merged = _reciprocal_rank_fusion(
         ranked_lists=[bm25_docs, chroma_docs],
-        weights=[BM25_WEIGHT, FAISS_WEIGHT],
+        weights=[BM25_WEIGHT, CHROMA_WEIGHT],
     )
     logger.info("[RAG][Hybrid] Sau RRF: %d docs unique.", len(merged))
 
