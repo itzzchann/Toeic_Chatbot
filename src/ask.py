@@ -101,7 +101,7 @@ def _get_chain():
                     _build_retrieval_query(x["standalone_question"])
                 ),
                 "history": lambda x: x["history"],
-                "question": lambda x: x["question"], # Vẫn giữ câu hỏi gốc cho bot trả lời
+                "question": lambda x: x["standalone_question"], # Dùng câu hỏi đã được làm rõ ngữ cảnh để LLM không bị lạc đề
             }
             | prompt
             | llm

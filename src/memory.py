@@ -7,8 +7,9 @@ Khi đầy, tự động xóa lượt cũ nhất (sliding window).
 
 import logging
 from collections import deque
+import threading
 from src.config import MAX_HISTORY_TURNS, MEMORY_ENABLED
-from src.model import get_llm
+from src.model import get_small_llm
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -51,14 +52,17 @@ class ConversationMemory:
         # Nếu vượt quá số lượt raw buffer, pop lượt cũ nhất và tóm tắt nó
         if len(self._history) > self.max_turns:
             oldest_q, oldest_a = self._history.popleft()
-            self._update_summary(oldest_q, oldest_a)
+            # Chạy việc tóm tắt ở background thread để không làm chậm luồng chat chính
+            thread = threading.Thread(target=self._update_summary, args=(oldest_q, oldest_a))
+            thread.start()
             
         logger.info("[Memory] Da luu luot. Buffer: %d/%d. Summary len: %d", len(self._history), self.max_turns, len(self.summary))
 
     def _update_summary(self, question: str, answer: str):
         """Dùng LLM để gộp lượt chat bị đẩy ra khỏi buffer vào đoạn tóm tắt."""
         try:
-            llm = get_llm()
+            llm = get_small_llm()
+            logger.info("[Memory] Đang dùng mô hình phụ (%s) để tóm tắt trí nhớ ngầm...", getattr(llm, 'model', 'unknown'))
             chain = SUMMARY_PROMPT | llm | StrOutputParser()
             new_summary = chain.invoke({
                 "summary": self.summary if self.summary else "Chưa có thông tin gì.",

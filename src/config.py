@@ -20,6 +20,7 @@ STREAM_OUTPUT = True   # True = streaming từng token; False = chờ toàn bộ
 # ==========================================
 EMBEDDING_MODEL_NAME = "intfloat/multilingual-e5-base"
 OLLAMA_MODEL_NAME = "gemma2"
+OLLAMA_SMALL_MODEL = "qwen2:0.5b"
 TEMPERATURE = 0.0
 TOP_P = 0.85
 TOP_K_RETRIEVE = 5   # Tăng từ 3 → 5: lấy nhiều chunk hơn để tăng Coverage, lọc rác bằng SCORE_THRESHOLD

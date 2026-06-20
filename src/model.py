@@ -5,13 +5,14 @@ Chỉ load một lần duy nhất, tái sử dụng cho mọi câu hỏi tiếp 
 
 from langchain_ollama import ChatOllama
 from langchain_huggingface import HuggingFaceEmbeddings
-from src.config import EMBEDDING_MODEL_NAME, OLLAMA_MODEL_NAME, TEMPERATURE, TOP_P
+from src.config import EMBEDDING_MODEL_NAME, OLLAMA_MODEL_NAME, OLLAMA_SMALL_MODEL, TEMPERATURE, TOP_P
 
 # ==========================================
 # SINGLETON INSTANCES (module-level cache)
 # ==========================================
 _embedding_model = None
 _llm = None
+_small_llm = None
 
 
 def get_embedding_model() -> HuggingFaceEmbeddings:
@@ -46,3 +47,17 @@ def get_llm() -> ChatOllama:
             num_predict=2048
         )
     return _llm
+
+def get_small_llm() -> ChatOllama:
+    """
+    Trả về LLM nhẹ dùng cho các tác vụ phụ (nhặt từ khóa, tóm tắt).
+    Singleton: chỉ khởi tạo 1 lần.
+    """
+    global _small_llm
+    if _small_llm is None:
+        _small_llm = ChatOllama(
+            model=OLLAMA_SMALL_MODEL,
+            temperature=0.0,
+            num_ctx=4096,
+        )
+    return _small_llm

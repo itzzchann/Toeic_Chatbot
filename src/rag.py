@@ -9,7 +9,7 @@ import logging
 from langchain_chroma import Chroma
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
-from src.model import get_embedding_model, get_llm
+from src.model import get_embedding_model, get_llm, get_small_llm
 from src.config import (
     CHROMA_DB_PATH,
     CHROMA_COLLECTION_NAME,
@@ -171,7 +171,8 @@ def preprocess_query_for_retrieval(query: str) -> str:
     Tiền xử lý câu hỏi để tối ưu hóa tìm kiếm bằng LLM (Keyword Extraction).
     """
     try:
-        llm = get_llm()
+        llm = get_small_llm()
+        logger.info("[RAG] Đang dùng mô hình phụ (%s) để trích xuất từ khóa...", getattr(llm, 'model', 'unknown'))
         prompt = f"""Bạn là một hệ thống trích xuất từ khóa tìm kiếm. 
 Nhiệm vụ: Trích xuất GIỮ NGUYÊN VĂN các danh từ, động từ quan trọng nhất và TOÀN BỘ từ tiếng Anh từ câu hỏi.
 TUYỆT ĐỐI KHÔNG DỊCH SANG TIẾNG ANH (Ví dụ: không dịch "đảo ngữ" thành "inversion"). Giữ nguyên ngôn ngữ gốc.
