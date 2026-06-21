@@ -98,7 +98,8 @@ def _get_chain():
                 "system_prompt": lambda x: SYSTEM_PROMPT_TOEIC,
                 # Dùng query đã viết lại để tìm kiếm tài liệu chính xác hơn
                 "context": lambda x: retrieve_context(
-                    _build_retrieval_query(x["standalone_question"])
+                    raw_query=x["standalone_question"],
+                    bm25_optimized_query=_build_retrieval_query(x["standalone_question"])
                 ),
                 "history": lambda x: x["history"],
                 "question": lambda x: x["standalone_question"], # Dùng câu hỏi đã được làm rõ ngữ cảnh để LLM không bị lạc đề

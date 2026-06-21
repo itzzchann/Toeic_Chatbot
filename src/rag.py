@@ -216,18 +216,21 @@ Từ khóa:"""
 # ==========================================
 # RETRIEVE CONTEXT
 # ==========================================
-def retrieve_context(query: str) -> str:
+def retrieve_context(raw_query: str, bm25_optimized_query: str = None) -> str:
     """
     Tìm kiếm tài liệu liên quan và ghép thành 1 đoạn văn bản đưa vào prompt.
 
-    - HYBRID_SEARCH=True  : BM25 + Chroma, merge bằng RRF.
-    - HYBRID_SEARCH=False : Chroma-only với score threshold lọc chunk kém.
+    - raw_query: Dùng cho Chroma (giữ nguyên cấu trúc ____ và A/B/C/D)
+    - bm25_optimized_query: Dùng cho BM25 (đã loại bỏ rác gây nhiễu)
     """
+    if bm25_optimized_query is None:
+        bm25_optimized_query = raw_query
+        
     try:
         if HYBRID_SEARCH:
-            return _retrieve_hybrid(query)
+            return _retrieve_hybrid(raw_query, bm25_optimized_query)
         else:
-            return _retrieve_chroma_only(query)
+            return _retrieve_chroma_only(raw_query, bm25_optimized_query)
 
     except FileNotFoundError as e:
         logger.error(str(e))
@@ -237,12 +240,13 @@ def retrieve_context(query: str) -> str:
         return "Không tìm thấy tài liệu."
 
 
-def _retrieve_hybrid(query: str) -> str:
+def _retrieve_hybrid(raw_query: str, bm25_optimized_query: str) -> str:
     """
     Hybrid Search: BM25 (keyword) + Chroma (semantic), merge bằng RRF.
     """
-    bm25_query = preprocess_query_for_retrieval(query)
-    logger.info("[RAG][Hybrid] Query goc: '%s' | BM25 Keywords: '%s'", query, bm25_query)
+    # Bước 1: BM25 dùng câu hỏi đã tối ưu (đã xoá A/B/C/D) để nhặt từ khoá
+    bm25_query = preprocess_query_for_retrieval(bm25_optimized_query)
+    logger.info("[RAG][Hybrid] Query Semantic: '%s' | Query BM25: '%s' | BM25 Keywords: '%s'", raw_query, bm25_optimized_query, bm25_query)
 
     # 1. BM25 search
     bm25 = _get_bm25_retriever()
@@ -251,12 +255,12 @@ def _retrieve_hybrid(query: str) -> str:
 
     # 2. Chroma semantic search (có metadata filter theo loại câu hỏi)
     db = get_vector_db()
-    meta_filter = _classify_query(query)
+    meta_filter = _classify_query(raw_query) # Cần dùng raw_query để nhận diện (A)
     try:
         if meta_filter:
             logger.info("[RAG][Hybrid] Ap dung metadata filter: %s", meta_filter)
-        # Sử dụng nguyên gốc query cho Chroma để không làm mất ngữ nghĩa
-        docs_and_scores = db.similarity_search_with_score(query, k=TOP_K_CHROMA, filter=meta_filter)
+        # Sử dụng nguyên gốc query cho Chroma để không làm mất ngữ nghĩa (đặc biệt là dấu ____)
+        docs_and_scores = db.similarity_search_with_score(raw_query, k=TOP_K_CHROMA, filter=meta_filter)
     except Exception as filter_err:
         # ChromaDB 1.x bug: metadata filter crash khi DB tạo bằng version cũ
         # Fallback về tìm không filter để không bị block
@@ -264,7 +268,7 @@ def _retrieve_hybrid(query: str) -> str:
             "[RAG][Hybrid] Metadata filter loi (%s) - fallback khong filter.",
             filter_err
         )
-        docs_and_scores = db.similarity_search_with_score(query, k=TOP_K_CHROMA)
+        docs_and_scores = db.similarity_search_with_score(raw_query, k=TOP_K_CHROMA)
         
     # Lọc chunk Chroma bằng SCORE_THRESHOLD
     chroma_docs = []
@@ -307,25 +311,26 @@ def _retrieve_hybrid(query: str) -> str:
     return "\n\n".join(doc.page_content for doc in final_docs)
 
 
-def _retrieve_chroma_only(query: str) -> str:
+def _retrieve_chroma_only(raw_query: str, bm25_optimized_query: str) -> str:
     """
     Chroma-only Search với score threshold để lọc chunk kém chất lượng.
     Dùng khi HYBRID_SEARCH=False.
     Lưu ý: Chroma trả về (doc, distance) - distance càng thấp càng tốt (cosine distance).
     """
     db = get_vector_db()
-    meta_filter = _classify_query(query)
-    clean_query = preprocess_query_for_retrieval(query)
+    meta_filter = _classify_query(raw_query)
+    
     try:
         if meta_filter:
             logger.info("[RAG][Chroma] Ap dung metadata filter: %s", meta_filter)
-        docs_and_scores = db.similarity_search_with_score(clean_query, k=TOP_K_RETRIEVE, filter=meta_filter)
+        # Sửa lỗi logic cũ: Chroma phải dùng raw_query chứa đầy đủ ngữ nghĩa, KHÔNG dùng clean_query (chỉ toàn từ khoá rời rạc)
+        docs_and_scores = db.similarity_search_with_score(raw_query, k=TOP_K_RETRIEVE, filter=meta_filter)
     except Exception as filter_err:
         logger.warning(
             "[RAG][Chroma] Metadata filter loi (%s) - fallback khong filter.",
             filter_err
         )
-        docs_and_scores = db.similarity_search_with_score(clean_query, k=TOP_K_RETRIEVE)
+        docs_and_scores = db.similarity_search_with_score(raw_query, k=TOP_K_RETRIEVE)
 
     if not docs_and_scores:
         logger.warning("[RAG][Chroma] Khong co ket qua tra ve.")
