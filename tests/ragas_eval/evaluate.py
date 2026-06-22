@@ -1,24 +1,6 @@
 """
 EVALUATE.PY - Script chính chạy RAGAS evaluation cho TOEIC Chatbot
-========================================================================
-Cách chạy (từ thư mục gốc TTNT/):
-    python -m tests.ragas_eval.evaluate            # Tự động dùng cache nếu có
-    python -m tests.ragas_eval.evaluate --rebuild  # Bắt buộc build lại từ đầu
-
-Cache:
-    Dataset (câu hỏi + câu trả lời của chatbot + context) được lưu vào:
-        tests/ragas_eval/dataset_cache.json
-    Lần đầu chạy: build dataset (gọi chatbot 119 lần) → lưu cache → eval
-    Lần sau     : load cache (2 giây) → eval ngay (bỏ qua bước gọi chatbot)
-
-Judge LLM: Local Ollama (qwen2.5) — chạy offline hoàn toàn miễn phí
-
-Metrics dùng:
-    - faithfulness      : Câu trả lời có bịa thêm thông tin ngoài context không?
-    - answer_relevancy  : Câu trả lời có đúng trọng tâm câu hỏi không?
-    - context_recall    : Context trích xuất có đầy đủ để trả lời không?
-    - context_precision : Context trích xuất có bị dư thừa nhiễu không?
-========================================================================"""
+"""
 
 import sys
 import time
@@ -33,17 +15,8 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 
-# RAGAS vẫn cần biến này để không bị lỗi import — không dùng OpenAI thật
-os.environ["OPENAI_API_KEY"] = "sk-dummy"
-
-# ── Thêm project root vào sys.path để import src/ ──
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
-
-# ── Tắt log ồn ào ──
-for lib in ("transformers", "httpx", "httpcore", "urllib3",
-            "sentence_transformers", "faiss", "ragas"):
-    logging.getLogger(lib).setLevel(logging.ERROR)
 
 # ══════════════════════════════════════════════════════════════
 # IMPORT RAGAS & LANGCHAIN WRAPPERS
@@ -83,11 +56,8 @@ from tests.ragas_eval.dataset import TOEIC_GOLDEN_DATASET
 
 OUTPUT_DIR   = PROJECT_ROOT / "tests" / "ragas_eval" / "reports"
 CACHE_FILE   = PROJECT_ROOT / "tests" / "ragas_eval" / "dataset_cache.json"
-# Dùng qwen2.5 chạy local trên Ollama làm Judge LLM
 EVAL_LLM_MODEL = "qwen2.5:7b"
 
-# Fix BadRequestError: RAGAS answer_relevancy mặc định gửi n=3 → Một số model local không hỗ trợ.
-# Đặt strictness=1 để chỉ gửi n=1 mỗi request.
 answer_relevancy.strictness = 1
 
 
@@ -95,7 +65,6 @@ answer_relevancy.strictness = 1
 # CACHE: LƯU / TẢI DATASET
 # ══════════════════════════════════════════════════════════════
 def save_cache(samples_raw: list[dict]) -> None:
-    """Lưu danh sách dict (user_input, response, retrieved_contexts, reference) ra JSON."""
     CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(samples_raw, f, ensure_ascii=False, indent=2)
@@ -103,10 +72,6 @@ def save_cache(samples_raw: list[dict]) -> None:
 
 
 def load_cache() -> list[dict] | None:
-    """
-    Tải cache từ JSON nếu tồn tại.
-    Trả về list[dict] hoặc None nếu chưa có cache.
-    """
     if not CACHE_FILE.exists():
         return None
     try:
@@ -120,7 +85,6 @@ def load_cache() -> list[dict] | None:
 
 
 def raw_to_dataset(samples_raw: list[dict]) -> EvaluationDataset:
-    """Chuyển list[dict] từ cache thành EvaluationDataset của RAGAS."""
     samples = [
         SingleTurnSample(
             user_input         = item["user_input"],
@@ -152,7 +116,6 @@ def warmup_system():
 # CHẠY PIPELINE VỚI TỪNG CÂU HỎI
 # ══════════════════════════════════════════════════════════════
 def run_pipeline_for_sample(question: str) -> dict:
-    """Gọi hệ thống thật: lấy context + answer cho 1 câu hỏi."""
     raw_context = retrieve_context(question)
     contexts    = [c.strip() for c in raw_context.split("\n\n") if c.strip()]
     answer      = get_bot_response(question)
@@ -164,13 +127,9 @@ def run_pipeline_for_sample(question: str) -> dict:
 
 
 # ══════════════════════════════════════════════════════════════
-# BUILD DATASET (gọi chatbot thật, tốn thời gian)
+# BUILD DATASET
 # ══════════════════════════════════════════════════════════════
 def build_and_cache_dataset(golden_data: list[dict]) -> EvaluationDataset:
-    """
-    Gọi chatbot cho toàn bộ golden_data, lưu kết quả vào cache JSON,
-    sau đó trả về EvaluationDataset.
-    """
     samples_raw = []
     total = len(golden_data)
 
@@ -191,7 +150,6 @@ def build_and_cache_dataset(golden_data: list[dict]) -> EvaluationDataset:
         except Exception as e:
             print(f"         ⚠️  Bỏ qua: {e}")
 
-    # Lưu cache ngay sau khi build xong
     save_cache(samples_raw)
     return raw_to_dataset(samples_raw)
 
@@ -265,7 +223,6 @@ def save_report(result, dataset: EvaluationDataset):
 def main():
     global CACHE_FILE
     
-    # ── Parse tham số dòng lệnh ──
     parser = argparse.ArgumentParser(description="RAGAS Evaluation cho TOEIC Chatbot")
     parser.add_argument(
         "--rebuild",
@@ -285,7 +242,6 @@ def main():
     print(f"║  Judge LLM: Ollama {EVAL_LLM_MODEL:<35} ║")
     print("╚" + "═" * 60 + "╝")
 
-    # Xác định dataset cần chạy
     if args.dataset:
         dataset_path = Path(args.dataset)
         if not dataset_path.exists():
@@ -293,29 +249,24 @@ def main():
             sys.exit(1)
         with open(dataset_path, "r", encoding="utf-8") as f:
             golden_data = json.load(f)
-        # Sửa tên cache để không đè lên cache mặc định
         CACHE_FILE = CACHE_FILE.parent / f"dataset_cache_{dataset_path.stem}.json"
         print(f"\n📂 Dùng dataset tùy chỉnh: {args.dataset} ({len(golden_data)} mẫu)")
     else:
         from tests.ragas_eval.dataset import TOEIC_GOLDEN_DATASET
         golden_data = TOEIC_GOLDEN_DATASET
 
-    # ── Bước 1: Load cache hoặc Build dataset ──
     cached = None if args.rebuild else load_cache()
 
     if cached is not None:
-        # ✅ Có cache → bỏ qua bước gọi chatbot
         print(f"\n⚡ Dùng cache có sẵn — bỏ qua bước gọi chatbot.")
         print(f"   (Dùng --rebuild để build lại từ đầu)\n")
         eval_dataset = raw_to_dataset(cached)
     else:
-        # 🔨 Chưa có cache hoặc --rebuild → build từ đầu
         if args.rebuild:
             print("\n🔨 --rebuild: Xóa cache cũ, build lại toàn bộ dataset...")
         else:
             print(f"\n📋 Chưa có cache. Build dataset ({len(golden_data)} câu hỏi)...")
 
-        # Cần Ollama + RAG để build
         warmup_system()
 
         t0 = time.time()
@@ -326,24 +277,20 @@ def main():
         print("❌ Không có mẫu nào. Kiểm tra pipeline hoặc xóa cache bằng --rebuild.")
         sys.exit(1)
 
-    # ── Bước 2: Khởi tạo Ragas Judge & Embeddings Wrapper ──
     print(f"⚙️  Khởi tạo Ragas Judge LLM ({EVAL_LLM_MODEL}) & Embeddings...")
     try:
-        # Dùng OpenAI-compatible client trỏ vào Ollama local endpoint
         ollama_client = OpenAIClient(
             api_key="ollama",
             base_url="http://localhost:11434/v1",
         )
         judge_llm = llm_factory(EVAL_LLM_MODEL, client=ollama_client)
 
-        # Embedding: vẫn dùng multilingual-e5 local (chạy offline, không tốn quota)
         evaluator_embeddings = LangchainEmbeddingsWrapper(get_embedding_model())
     except Exception as e:
         print(f"\n❌ Lỗi khởi tạo Ollama: {e}")
         print("   Hãy kiểm tra Ollama service có đang chạy tại http://localhost:11434 không.")
         sys.exit(1)
 
-    # ── Bước 3: RAGAS evaluate ──
     print("🚀 Đang chạy RAGAS evaluation...")
     metrics = [faithfulness, answer_relevancy, context_recall, context_precision]
 
@@ -354,7 +301,7 @@ def main():
             metrics=metrics,
             llm=judge_llm,
             embeddings=evaluator_embeddings,
-            batch_size=2,   # Giảm xuống 2 để tránh burst rate limit trên free tier
+            batch_size=2,
         )
     except Exception as e:
         print(f"\n❌ RAGAS lỗi: {e}")
@@ -364,7 +311,6 @@ def main():
 
     elapsed = time.time() - eval_start
 
-    # ── Bước 4: In + lưu ──
     csv_path = save_report(result, eval_dataset)
     print_results(result, elapsed, csv_path)
 

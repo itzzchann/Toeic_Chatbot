@@ -1,6 +1,5 @@
 """
-MODEL.PY - Khởi tạo Embedding Model và LLM (Singleton Pattern)
-Chỉ load một lần duy nhất, tái sử dụng cho mọi câu hỏi tiếp theo.
+MODEL.PY - Khởi tạo Embedding Model và LLM
 """
 
 from langchain_ollama import ChatOllama
@@ -8,7 +7,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from src.config import EMBEDDING_MODEL_NAME, OLLAMA_MODEL_NAME, OLLAMA_SMALL_MODEL, TEMPERATURE, TOP_P
 
 # ==========================================
-# SINGLETON INSTANCES (module-level cache)
+# SINGLETON INSTANCES
 # ==========================================
 _embedding_model = None
 _llm = None
@@ -18,7 +17,6 @@ _small_llm = None
 def get_embedding_model() -> HuggingFaceEmbeddings:
     """
     Trả về embedding model đa ngôn ngữ.
-    Singleton: chỉ khởi tạo 1 lần, tái dùng cho mọi lần gọi sau.
     """
     global _embedding_model
     if _embedding_model is None:
@@ -34,8 +32,6 @@ def get_embedding_model() -> HuggingFaceEmbeddings:
 def get_llm() -> ChatOllama:
     """
     Trả về LLM chạy offline qua Ollama.
-    Singleton: chỉ khởi tạo 1 lần, tái dùng cho mọi lần gọi sau.
-    Raises: ConnectionError nếu Ollama chưa được khởi động.
     """
     global _llm
     if _llm is None:
@@ -50,8 +46,7 @@ def get_llm() -> ChatOllama:
 
 def get_small_llm() -> ChatOllama:
     """
-    Trả về LLM nhẹ dùng cho các tác vụ phụ (nhặt từ khóa, tóm tắt).
-    Singleton: chỉ khởi tạo 1 lần.
+    Trả về LLM nhẹ dùng cho các tác vụ phụ.
     """
     global _small_llm
     if _small_llm is None:

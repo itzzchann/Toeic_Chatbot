@@ -36,7 +36,7 @@ class ConversationMemory:
     và lưu vĩnh viễn, tránh làm tràn bộ nhớ mà vẫn không bị mất thông tin cũ.
     """
 
-    def __init__(self, max_turns: int = 3): # Giữ 3 lượt gần nhất, còn lại tóm tắt
+    def __init__(self, max_turns: int = MAX_HISTORY_TURNS):
         self.max_turns = max_turns
         self._history: deque[tuple[str, str]] = deque()
         self.summary = ""
@@ -49,17 +49,14 @@ class ConversationMemory:
             
         self._history.append((question.strip(), answer.strip()))
         
-        # Nếu vượt quá số lượt raw buffer, pop lượt cũ nhất và tóm tắt nó
         if len(self._history) > self.max_turns:
             oldest_q, oldest_a = self._history.popleft()
-            # Chạy việc tóm tắt ở background thread để không làm chậm luồng chat chính
             thread = threading.Thread(target=self._update_summary, args=(oldest_q, oldest_a))
             thread.start()
             
         logger.info("[Memory] Da luu luot. Buffer: %d/%d. Summary len: %d", len(self._history), self.max_turns, len(self.summary))
 
     def _update_summary(self, question: str, answer: str):
-        """Dùng LLM để gộp lượt chat bị đẩy ra khỏi buffer vào đoạn tóm tắt."""
         try:
             llm = get_small_llm()
             logger.info("[Memory] Đang dùng mô hình phụ (%s) để tóm tắt trí nhớ ngầm...", getattr(llm, 'model', 'unknown'))
@@ -67,7 +64,6 @@ class ConversationMemory:
             new_summary = chain.invoke({
                 "summary": self.summary if self.summary else "Chưa có thông tin gì.",
                 "question": question,
-                # Rút gọn câu trả lời của gia sư để tóm tắt nhanh hơn, chỉ cần ý chính
                 "answer": answer[:250] + "..." if len(answer) > 250 else answer
             }).strip()
             self.summary = new_summary
@@ -76,10 +72,6 @@ class ConversationMemory:
             logger.error("[Memory] Loi khi update summary: %s", e)
 
     def format_for_prompt(self) -> str:
-        """
-        Định dạng lịch sử thành text đưa vào prompt.
-        Bao gồm: [Tóm tắt lịch sử cũ] + [Các lượt chat gần nhất]
-        """
         if not MEMORY_ENABLED:
             return ""
             
@@ -90,10 +82,9 @@ class ConversationMemory:
         for i, (q, a) in enumerate(self._history, start=1):
             lines.append(f"[Lượt gần đây {i}]")
             lines.append(f"Học viên: {q}")
-            # Giới hạn độ dài câu trả lời trong history để tránh prompt quá dài
             short_answer = a if len(a) <= 500 else a[:500] + "...(rút gọn)"
             lines.append(f"Gia sư: {short_answer}")
-            lines.append("")   # Dòng trống giữa các lượt
+            lines.append("")
 
         return "\n".join(lines).strip()
 

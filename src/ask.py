@@ -1,9 +1,5 @@
 """
 ASK.PY - Điều phối toàn bộ pipeline: RAG → Prompt → LLM → Output
-
-Cải tiến:
-- Chain Singleton: build chain 1 lần duy nhất, tái sử dụng cho mọi câu hỏi.
-- Streaming: stream_bot_response() yield từng token thay vì chờ toàn bộ.
 """
 
 import re
@@ -18,27 +14,18 @@ from src.config import SYSTEM_PROMPT_TOEIC, PROMPT_TEMPLATE
 logger = logging.getLogger(__name__)
 
 # ==========================================
-# QUERY PREPROCESSOR (tối ưu retrieval cho MCQ)
+# QUERY PREPROCESSOR
 # ==========================================
 def _build_retrieval_query(question: str) -> str:
-    """
-    Xây dựng query tối ưu cho retriever:
-    - Nếu là MCQ (có A), B), C), D)): xóa các dòng đáp án và dấu ______
-      để BM25 khớp được từ khóa ngữ pháp thay vì các lựa chọn A/B/C/D.
-    - Câu lý thuyết thường: dùng nguyên xi.
-    """
-    # Phát hiện MCQ bằng dấu hiệu "A)" hoặc "A." ở đầu dòng
     is_mcq = bool(re.search(r'(?m)^\s*[A-D][).]', question))
 
     if is_mcq:
         lines = question.strip().split('\n')
-        # Chỉ giữ lại dòng câu chính, bỏ dòng đáp án
         main_lines = [
             l for l in lines
             if not re.match(r'^\s*[A-D][).\s]', l)
         ]
         query = ' '.join(main_lines).strip()
-        # Xóa dấu ______ (nhiễu cho BM25, không mang thông tin ngữ pháp)
         query = re.sub(r'_{2,}', '', query).strip()
         logger.debug("[ASK] MCQ query được xử lý: %s", query[:80])
         return query
@@ -60,11 +47,10 @@ CONDENSE_QUESTION_PROMPT = ChatPromptTemplate.from_template(
 )
 
 def _get_standalone_question(inputs: dict) -> str:
-    """Nếu có lịch sử, dùng LLM để dịch lại câu hỏi cho đầy đủ nghĩa trước khi đem đi search."""
     question = inputs["question"]
     history = inputs.get("history", "")
     if not history.strip():
-        return question  # Không có lịch sử thì giữ nguyên
+        return question
     
     llm = get_llm()
     chain = CONDENSE_QUESTION_PROMPT | llm | StrOutputParser()
@@ -75,16 +61,12 @@ def _get_standalone_question(inputs: dict) -> str:
     return standalone
 
 # ==========================================
-# SINGLETON CHAIN (build 1 lần duy nhất)
+# SINGLETON CHAIN
 # ==========================================
 _chain = None
 
 
 def _get_chain():
-    """
-    Khởi tạo và cache LangChain LCEL pipeline.
-    Singleton: tránh rebuild PromptTemplate + bind LLM mỗi lần hỏi.
-    """
     global _chain
     if _chain is None:
         logger.info("[ASK] Khoi tao chain lan dau...")
@@ -96,13 +78,12 @@ def _get_chain():
             )
             | {
                 "system_prompt": lambda x: SYSTEM_PROMPT_TOEIC,
-                # Dùng query đã viết lại để tìm kiếm tài liệu chính xác hơn
                 "context": lambda x: retrieve_context(
                     raw_query=x["standalone_question"],
                     bm25_optimized_query=_build_retrieval_query(x["standalone_question"])
                 ),
                 "history": lambda x: x["history"],
-                "question": lambda x: x["standalone_question"], # Dùng câu hỏi đã được làm rõ ngữ cảnh để LLM không bị lạc đề
+                "question": lambda x: x["standalone_question"],
             }
             | prompt
             | llm
@@ -113,24 +94,15 @@ def _get_chain():
 
 
 def get_bot_response(user_query: str, history: str = "") -> str:
-    """
-    Nhận câu hỏi, trả về toàn bộ câu trả lời dưới dạng chuỗi (blocking).
-    Dùng khi STREAM_OUTPUT = False.
-    """
     logger.info("[ASK] Nhan cau hoi (invoke mode): %s", user_query[:80])
     return _get_chain().invoke({"question": user_query, "history": history})
 
 
 def stream_bot_response(user_query: str, history: str = ""):
-    """
-    Generator: yield từng token khi LLM sinh ra.
-    Dùng khi STREAM_OUTPUT = True — người dùng thấy text xuất hiện dần.
-    """
     logger.info("[ASK] Nhan cau hoi (stream mode): %s", user_query[:80])
     yield from _get_chain().stream({"question": user_query, "history": history})
 
 
-# Chạy thử trực tiếp trên Terminal
 if __name__ == "__main__":
     from src.config import STREAM_OUTPUT
     while True:

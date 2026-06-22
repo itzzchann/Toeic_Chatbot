@@ -4,7 +4,7 @@ Chạy lệnh: streamlit run streamlit_app.py
 """
 
 # ==========================================
-# VÁ LỖI PYTORCH KHẨN CẤP (PHẢI NẰM Ở DÒNG ĐẦU TIÊN)
+# PYTORCH FIX
 # ==========================================
 import torch
 try:
@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore", category=UserWarning, message=".*Accessing.*__
 warnings.filterwarnings("ignore", category=UserWarning, message=".*alias will be removed.*")
 
 # ==========================================
-# BÂY GIỜ MỚI IMPORT CÁC THƯ VIỆN KHÁC
+# IMPORTS
 # ==========================================
 import sys
 import logging
@@ -28,7 +28,7 @@ from src.config import HYBRID_SEARCH
 from src.memory import ConversationMemory
 
 # ==========================================
-# PAGE CONFIG (phải là lệnh đầu tiên)
+# PAGE CONFIG
 # ==========================================
 st.set_page_config(
     page_title="AI TOEIC Chatbot",
@@ -403,25 +403,24 @@ if "chip_query" not in st.session_state:
 
 
 # ==========================================
-# LOGGING (tắt log ồn ào)
+# LOGGING
 # ==========================================
 for lib in ("transformers", "httpx", "httpcore", "urllib3", "sentence_transformers"):
     logging.getLogger(lib).setLevel(logging.ERROR)
 
 
 # ==========================================
-# WARM-UP MODELS (chỉ 1 lần)
+# WARM-UP MODELS
 # ==========================================
 @st.cache_resource(show_spinner=False)
 def load_system():
-    """Load Chroma + BM25 một lần, cache vào RAM."""
     db = get_vector_db()
     retriever = _get_bm25_retriever() if HYBRID_SEARCH else None
     return db, retriever
 
 
 # ==========================================
-# SIDEBAR — Clear History
+# SIDEBAR
 # ==========================================
 with st.sidebar:
     st.markdown("### ⚙️ Cài đặt")
@@ -503,7 +502,7 @@ if st.session_state.show_chips and len(st.session_state.messages) <= 1:
 
 
 # ==========================================
-# PROCESS CHIP QUERY (nếu có)
+# PROCESS CHIP QUERY
 # ==========================================
 pending_query = None
 if st.session_state.chip_query:
@@ -512,11 +511,10 @@ if st.session_state.chip_query:
 
 
 # ==========================================
-# INPUT FORM (bottom-pinned via st.container)
+# INPUT FORM
 # ==========================================
 with st.container():
     with st.form(key="chat_form", clear_on_submit=True, border=False):
-        # Layout: [input lớn] [send] [clear]
         col_input, col_send, col_clear = st.columns([10, 1, 1])
 
         with col_input:
@@ -533,14 +531,12 @@ with st.container():
         with col_clear:
             clear_clicked = st.form_submit_button("🗑", type="secondary")
 
-# Ưu tiên chip query nếu có
 user_input = None
 if send_clicked and typed:
     user_input = typed.strip()
 elif pending_query:
     user_input = pending_query
 
-# Xử lý xóa lịch sử
 if clear_clicked:
     st.session_state.messages = []
     st.session_state.memory = ConversationMemory()
@@ -552,18 +548,14 @@ if clear_clicked:
 # HANDLE USER MESSAGE + STREAM RESPONSE
 # ==========================================
 if user_input:
-    # Ẩn chips sau lần nhắn đầu
     st.session_state.show_chips = False
 
-    # Lưu và hiển thị user message
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user", avatar="👤"):
         st.markdown(user_input)
 
-    # Lấy history từ memory
     history_str = st.session_state.memory.format_for_prompt()
 
-    # Stream response từ LLM
     with st.chat_message("assistant", avatar="🎓"):
         try:
             response = st.write_stream(
@@ -576,7 +568,6 @@ if user_input:
             response = f"⚠️ **Lỗi:** {e}"
             st.error(response)
 
-    # Lưu vào history
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.session_state.memory.add_turn(user_input, response)
     st.rerun()

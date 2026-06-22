@@ -10,10 +10,10 @@ PROJECT_ROOT = Path(__file__).parent.parent
 # ==========================================
 # 1. HẰNG SỐ CẤU HÌNH HỆ THỐNG
 # ==========================================
-DEBUG_MODE = True      # True = in log ra console; False = chỉ ghi file
+DEBUG_MODE = True
 MAX_RETRIES = 3
 RETRY_DELAY = 2
-STREAM_OUTPUT = True   # True = streaming từng token; False = chờ toàn bộ rồi in
+STREAM_OUTPUT = True
 
 # ==========================================
 # MODEL & DATABASE CONFIG (CHROMA DB)
@@ -23,39 +23,30 @@ OLLAMA_MODEL_NAME = "gemma2"
 OLLAMA_SMALL_MODEL = "qwen2:0.5b"
 TEMPERATURE = 0.0
 TOP_P = 0.85
-TOP_K_RETRIEVE = 5   # Tăng từ 3 → 5: lấy nhiều chunk hơn để tăng Coverage, lọc rác bằng SCORE_THRESHOLD
-# Ngưỡng Cosine Distance của Chroma: chunk có score > ngưỡng này sẽ bị loại bỏ.
-# Cosine distance: 0.0 = giống hoàn toàn, 2.0 = hoàn toàn khác nhau. Ngưỡng hợp lý: 0.5 - 1.0
-SCORE_THRESHOLD = 0.6  # Giảm từ 0.8 → 0.6: lọc keắt hơn, loại bỏ chunk không liên quan (cosine distance thấp = liên quan hơn)
-CHROMA_DB_PATH = str(PROJECT_ROOT / "data")        # Thư mục chứa chroma.sqlite3
-CHROMA_COLLECTION_NAME = "langchain"               # Tên collection mặc định của LangChain
+TOP_K_RETRIEVE = 5
+SCORE_THRESHOLD = 0.6
+CHROMA_DB_PATH = str(PROJECT_ROOT / "data")
+CHROMA_COLLECTION_NAME = "langchain"
 
 # ==========================================
 # HYBRID SEARCH CONFIG
 # ==========================================
-# Bật Hybrid Search (Chroma semantic + BM25 keyword) thay vì chỉ dùng Chroma.
-# BM25 hiệu quả hơn với các thuật ngữ kỹ thuật cụ thể (vd: "gerund", "subjunctive").
 HYBRID_SEARCH = True
 
-# Trọng số cho EnsembleRetriever (tổng phải = 1.0).
-# Tăng CHROMA_WEIGHT nếu muốn ưu tiên hiểu ngữ nghĩa.
-# Tăng BM25_WEIGHT nếu muốn ưu tiên khớp từ khóa chính xác.
-BM25_WEIGHT    = 0.7   # Tăng lên 0.7: thiên về tìm kiếm từ khóa chính xác (đặc biệt hữu ích với thuật ngữ tiếng Anh)
-CHROMA_WEIGHT  = 0.3   # Giảm xuống 0.3: giảm bớt sự phụ thuộc vào tìm kiếm ngữ nghĩa Chroma
+BM25_WEIGHT    = 0.7
+CHROMA_WEIGHT  = 0.3
 
-# Số chunk mỗi retriever lấy — EnsembleRetriever sẽ merge rồi deduplicate.
 TOP_K_BM25   = 15
 TOP_K_CHROMA = 15
 
 # ==========================================
 # CONVERSATIONAL MEMORY CONFIG
 # ==========================================
-# Lưu trữ hội thoại để AI có thể hiểu bối cảnh của các câu hỏi tiếp nối.
 MEMORY_ENABLED = True
 MAX_HISTORY_TURNS = 5
 
 # ==========================================
-# 2. SYSTEM PROMPT (LUẬT CHƠI CỦA AI)
+# 2. SYSTEM PROMPT
 # ==========================================
 SYSTEM_PROMPT_TOEIC = """# ROLE (VAI TRÒ)
 Bạn là một Giáo viên chuyên luyện thi TOEIC (Senior TOEIC Tutor) với 20 năm kinh nghiệm. 
@@ -87,9 +78,8 @@ Hãy phản hồi một cách tự nhiên, giống như một giáo viên đang 
 """
 
 # ==========================================
-# 3. PROMPT TEMPLATE (KHUÔN LẮP RÁP LCEL)
+# 3. PROMPT TEMPLATE
 # ==========================================
-# Lưu ý: Các biến {system_prompt}, {context}, {question} phải khớp với khai báo input_variables trong ask.py
 PROMPT_TEMPLATE = """
 {system_prompt}
 

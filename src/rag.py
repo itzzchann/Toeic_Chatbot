@@ -27,31 +27,18 @@ logger = logging.getLogger(__name__)
 # ==========================================
 def _classify_query(query: str) -> dict | None:
     """
-    Phân loại câu hỏi dựa trên hình thái ngôn ngữ → trả về Chroma metadata filter.
-
-    Phân bổ thực tế trong DB (1194 chunks):
-      grammar      : 787 chunks — ngữ pháp lý thuyết, collocation, phrasal verbs
-      practice_test: 363 chunks — đề ETS, bài tập Part 5 có đáp án
-      tips         :  44 chunks — mẹo làm bài Part 5
+    Phân loại câu hỏi dựa trên hình thái ngôn ngữ.
 
     Returns:
         dict  : Chroma where-filter, ví dụ {"category": "grammar"}
         None  : không filter, tìm toàn bộ database (fallback)
     """
-    # ── NHÓM 1: Câu Part 5 trắc nghiệm có (A)(B)(C)(D)
-    # Dấu hiệu: bắt đầu "Giải thích" VÀ có "(A)" trong câu hỏi
     if re.search(r'Gi\u1ea3i th\u00edch', query) and re.search(r'\(A\)', query):
         return {"category": {"$in": ["grammar", "practice_test"]}}
 
-    # ── NHÓM 2: Collocation / cụm từ cố định
-    # Dấu hiệu: câu bắt đầu "Cụm từ '...'"
-    # Collocation nằm trong grammar (file grammar-200_Collocation...)
-    # Vẫn include tips phòng trường hợp mẹo liên quan
     if re.match(r"^C\u1ee5m t\u1eeb\s+'", query):
         return {"category": {"$in": ["grammar", "tips"]}}
 
-    # ── NHÓM 3: Lý thuyết ngữ pháp (công thức, cách dùng, từ nhận biết)
-    # Dấu hiệu: các từ khoá chỉ câu hỏi lý thuyết
     if re.search(
         r'(C\u00f4ng th\u1ee9c|C\u00e1ch d\u00f9ng|t\u1eeb nh\u1eadn bi\u1ebft'
         r'|Nh\u1eefng t\u1eeb n\u00e0o|C\u00e1c tr\u1ea1ng t\u1eeb'
@@ -60,7 +47,6 @@ def _classify_query(query: str) -> dict | None:
     ):
         return {"category": "grammar"}
 
-    # ── FALLBACK: không nhận dạng được → tìm toàn bộ database
     logger.debug("[RAG][Classify] Khong nhan dang duoc query, tim toan bo DB.")
     return None
 
@@ -77,8 +63,6 @@ _bm25_retriever: BM25Retriever | None = None
 def get_vector_db() -> Chroma:
     """
     Load kho dữ liệu Chroma từ local disk.
-    Singleton: chỉ load từ disk 1 lần, cache vào RAM cho các lần sau.
-    Raises: FileNotFoundError nếu thư mục data/ không tồn tại hoặc không có chroma.sqlite3.
     """
     global _vector_db
     if _vector_db is None:
@@ -105,12 +89,10 @@ def get_vector_db() -> Chroma:
 def _get_bm25_retriever() -> BM25Retriever:
     """
     Khởi tạo BM25Retriever từ toàn bộ documents trong Chroma.
-    Singleton: tokenize nhiều docs mất thời gian, chỉ làm 1 lần.
     """
     global _bm25_retriever
     if _bm25_retriever is None:
         db = get_vector_db()
-        # Lấy toàn bộ documents từ Chroma collection
         result = db._collection.get(include=["documents", "metadatas"])
         all_docs: list[Document] = [
             Document(page_content=text, metadata=meta)
@@ -134,24 +116,17 @@ def _reciprocal_rank_fusion(
     """
     Merge nhiều ranked list bằng Reciprocal Rank Fusion (RRF).
 
-    Công thức: score(doc) = Σ weight_i / (k + rank_i)
-    - k=60: hằng số chuẩn của RRF, giảm ảnh hưởng của rank quá cao.
-    - weight_i: trọng số của từng retriever (BM25_WEIGHT, CHROMA_WEIGHT).
-    - Deduplicate bằng page_content hash.
-
     Trả về: list[Document] sắp xếp theo RRF score giảm dần.
     """
-    scores: dict[str, float] = {}       # content_hash → RRF score
-    doc_map: dict[str, Document] = {}   # content_hash → Document
+    scores: dict[int, float] = {}       # content_hash → RRF score
+    doc_map: dict[int, Document] = {}   # content_hash → Document
 
     for docs, weight in zip(ranked_lists, weights):
         for rank, doc in enumerate(docs, start=1):
-            # Dùng content làm key dedup (tránh trùng lặp giữa 2 retriever)
             key = hash(doc.page_content)
             doc_map[key] = doc
             scores[key] = scores.get(key, 0.0) + weight / (k + rank)
 
-    # Sắp xếp giảm dần theo RRF score
     sorted_keys = sorted(scores, key=lambda x: scores[x], reverse=True)
 
     for i, key in enumerate(sorted_keys):
@@ -168,7 +143,7 @@ def _reciprocal_rank_fusion(
 # ==========================================
 def preprocess_query_for_retrieval(query: str) -> str:
     """
-    Tiền xử lý câu hỏi để tối ưu hóa tìm kiếm bằng LLM (Keyword Extraction).
+    Tiền xử lý câu hỏi để tối ưu hóa tìm kiếm bằng LLM.
     """
     try:
         llm = get_small_llm()
@@ -195,7 +170,6 @@ Từ khóa:"""
     except Exception as e:
         logger.error("[RAG][Preprocess] LLM Extraction loi: %s. Fallback ve regex.", e)
         
-    # Fallback if LLM fails
     clean_query = query.lower()
     vietnamese_stopwords = [
         r"\bcụm từ\b", r"\bnghĩa là gì\b", r"\bví dụ\b", r"\bnhư thế nào\b",
@@ -219,9 +193,6 @@ Từ khóa:"""
 def retrieve_context(raw_query: str, bm25_optimized_query: str = None) -> str:
     """
     Tìm kiếm tài liệu liên quan và ghép thành 1 đoạn văn bản đưa vào prompt.
-
-    - raw_query: Dùng cho Chroma (giữ nguyên cấu trúc ____ và A/B/C/D)
-    - bm25_optimized_query: Dùng cho BM25 (đã loại bỏ rác gây nhiễu)
     """
     if bm25_optimized_query is None:
         bm25_optimized_query = raw_query
@@ -242,35 +213,28 @@ def retrieve_context(raw_query: str, bm25_optimized_query: str = None) -> str:
 
 def _retrieve_hybrid(raw_query: str, bm25_optimized_query: str) -> str:
     """
-    Hybrid Search: BM25 (keyword) + Chroma (semantic), merge bằng RRF.
+    Hybrid Search: BM25 + Chroma, merge bằng RRF.
     """
-    # Bước 1: BM25 dùng câu hỏi đã tối ưu (đã xoá A/B/C/D) để nhặt từ khoá
     bm25_query = preprocess_query_for_retrieval(bm25_optimized_query)
     logger.info("[RAG][Hybrid] Query Semantic: '%s' | Query BM25: '%s' | BM25 Keywords: '%s'", raw_query, bm25_optimized_query, bm25_query)
 
-    # 1. BM25 search
     bm25 = _get_bm25_retriever()
     bm25_docs = bm25.invoke(bm25_query)
     logger.info("[RAG][Hybrid] BM25 tra ve %d docs.", len(bm25_docs))
 
-    # 2. Chroma semantic search (có metadata filter theo loại câu hỏi)
     db = get_vector_db()
-    meta_filter = _classify_query(raw_query) # Cần dùng raw_query để nhận diện (A)
+    meta_filter = _classify_query(raw_query)
     try:
         if meta_filter:
             logger.info("[RAG][Hybrid] Ap dung metadata filter: %s", meta_filter)
-        # Sử dụng nguyên gốc query cho Chroma để không làm mất ngữ nghĩa (đặc biệt là dấu ____)
         docs_and_scores = db.similarity_search_with_score(raw_query, k=TOP_K_CHROMA, filter=meta_filter)
     except Exception as filter_err:
-        # ChromaDB 1.x bug: metadata filter crash khi DB tạo bằng version cũ
-        # Fallback về tìm không filter để không bị block
         logger.warning(
             "[RAG][Hybrid] Metadata filter loi (%s) - fallback khong filter.",
             filter_err
         )
         docs_and_scores = db.similarity_search_with_score(raw_query, k=TOP_K_CHROMA)
         
-    # Lọc chunk Chroma bằng SCORE_THRESHOLD
     chroma_docs = []
     rejected = 0
     for doc, score in docs_and_scores:
@@ -285,21 +249,18 @@ def _retrieve_hybrid(raw_query: str, bm25_optimized_query: str) -> str:
 
     logger.info("[RAG][Hybrid] Chroma tra ve %d docs.", len(chroma_docs))
 
-    # 3. RRF merge
     merged = _reciprocal_rank_fusion(
         ranked_lists=[bm25_docs, chroma_docs],
         weights=[BM25_WEIGHT, CHROMA_WEIGHT],
     )
     logger.info("[RAG][Hybrid] Sau RRF: %d docs unique.", len(merged))
 
-    # 4. Lấy TOP_K_RETRIEVE doc tốt nhất + lọc chunk rác quá ngắn
-    candidates = merged[:TOP_K_RETRIEVE * 2]   # lấy dư rồi lọc
+    candidates = merged[:TOP_K_RETRIEVE * 2]
     final_docs = [
         d for d in candidates
-        if len(d.page_content.strip()) >= 100  # Hạ từ 150 → 100: tránh lọc mất collocation ngắn
+        if len(d.page_content.strip()) >= 100
     ][:TOP_K_RETRIEVE]
 
-    # Nếu lọc quá nhiều, fallback về merged gốc
     if not final_docs:
         final_docs = merged[:TOP_K_RETRIEVE]
 
@@ -313,9 +274,7 @@ def _retrieve_hybrid(raw_query: str, bm25_optimized_query: str) -> str:
 
 def _retrieve_chroma_only(raw_query: str, bm25_optimized_query: str) -> str:
     """
-    Chroma-only Search với score threshold để lọc chunk kém chất lượng.
-    Dùng khi HYBRID_SEARCH=False.
-    Lưu ý: Chroma trả về (doc, distance) - distance càng thấp càng tốt (cosine distance).
+    Chroma-only Search.
     """
     db = get_vector_db()
     meta_filter = _classify_query(raw_query)
@@ -323,7 +282,6 @@ def _retrieve_chroma_only(raw_query: str, bm25_optimized_query: str) -> str:
     try:
         if meta_filter:
             logger.info("[RAG][Chroma] Ap dung metadata filter: %s", meta_filter)
-        # Sửa lỗi logic cũ: Chroma phải dùng raw_query chứa đầy đủ ngữ nghĩa, KHÔNG dùng clean_query (chỉ toàn từ khoá rời rạc)
         docs_and_scores = db.similarity_search_with_score(raw_query, k=TOP_K_RETRIEVE, filter=meta_filter)
     except Exception as filter_err:
         logger.warning(
